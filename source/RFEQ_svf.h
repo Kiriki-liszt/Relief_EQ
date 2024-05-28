@@ -102,7 +102,7 @@ public:
 
 	SVF() :
 		dB(0.5), Hz(1.0), Q(1.0), Fs(48000.0),
-		gt0(0.0), gt1(0.0), gt2(0.0), gk0(0.0), gk1(0.0),
+		gt0(0.0), gk0(0.0),
 		m0(0.0), m1(0.0), m2(0.0),
 		v0(0.0), v1(0.0), v2(0.0),
 		t0(0.0), t1(0.0), t2(0.0),
@@ -114,7 +114,7 @@ public:
 
 	SVF(double _Hz) :
 		dB(0.5), Hz(_Hz), Q(1.0), Fs(192000.0),
-		gt0(0.0), gt1(0.0), gt2(0.0), gk0(0.0), gk1(0.0),
+		gt0(0.0), gk0(0.0),
 		m0(0.0), m1(0.0), m2(0.0),
 		v0(0.0), v1(0.0), v2(0.0),
 		t0(0.0), t1(0.0), t2(0.0),
@@ -137,10 +137,7 @@ public:
 		this->Fs = src->Fs;
 
 		this->gt0 = src->gt0;
-		this->gt1 = src->gt1;
-		this->gt2 = src->gt2;
 		this->gk0 = src->gk0;
-		this->gk1 = src->gk1;
 		this->m0 = src->m0;
 		this->m1 = src->m1;
 		this->m2 = src->m2;
@@ -373,11 +370,10 @@ private:
 	double Fs;
 
 	double w, g, k;
+	double gt0;
+	double gk0;
 
-	double gt0, gt1, gt2;
-	double gk0, gk1;
 	double m0, m1, m2;
-
 	double v0, v1, v2;
 	double t0, t1, t2;
 	double ic1eq;

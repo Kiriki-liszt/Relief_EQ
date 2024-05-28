@@ -111,12 +111,12 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		for (int ch = 0; ch < numChannels; ch++) {
 			one[ch].setSVF(
 				true, 
-				48000.0, 
+				getSampleRate,
 				SVF::_dB_to_norm(9.0), 
 				SVF::_Hz_to_norm(500.0), 
-				SVF::_Q_to_norm(25.0),
-				SVF::_Type_to_norm(SVF::kBell), 
-				SVF::_Order_to_norm(SVF::_12dBoct)
+				SVF::_Q_to_norm(2.0),
+				SVF::_Type_to_norm(SVF::kHighShelf), 
+				SVF::_Order_to_norm(SVF::_6dBoct)
 			);
 			one[ch].makeSVF();
 			Vst::Sample32* ptrIn = (Vst::Sample32*)in[ch];

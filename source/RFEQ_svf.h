@@ -190,8 +190,8 @@ public:
 		case kLowPass:      m0 = 0;   m1 = 0;   m2 = 1;   break;
 		case kHighPass:     m0 = 1;   m1 = 0;   m2 = 0;   break;
 		case kBell:         m0 = 1;   m1 = kmA; m2 = 1;   g = g;    k = kdA;   break;
-		case kLowShelf:     m0 = 1;   m1 = 0;   m2 = AmA; g = gdA;  k = 1 - g; break;
-		case kHighShelf:    m0 = AmA; m1 = 0;   m2 = 1;   g = gmA;  k = 1 - g; break;
+		case kLowShelf:     m0 = 1;   m1 = 0;   m2 = AmA; g = gdA;  break;
+		case kHighShelf:    m0 = AmA; m1 = 0;   m2 = 1;   g = gmA;  break;
 		case kLowShelfHiQ:  m0 = 1;   m1 = smA; m2 = AmA; g = gdSA; k = s;     break;
 		case kHighShelfHiQ: m0 = AmA; m1 = smA; m2 = 1;   g = gmSA; k = s;     break;
 		default: break;
@@ -199,9 +199,6 @@ public:
 
 		gt0 = 1 / (1 + g * (g + k));
 		gk0 = (g + k) * gt0;
-		gt1 = g * gt0;
-		gk1 = g * gk0;
-		gt2 = g * gt1;
 		return;
 	};
 
@@ -223,18 +220,6 @@ public:
 
 			return m0 * v0 + m2 * v2;
 		}
-
-		/*
-		// tick parallel (possibly quicker on cpus with large pipelines)
-		t0 = vin - ic2eq;
-		v0 = gt0 * t0 - gk0 * ic1eq;
-		t1 = gt1 * t0 - gk1 * ic1eq;
-		t2 = gt2 * t0 + gt1 * ic1eq;
-		v1 = t1 + ic1eq;
-		v2 = t2 + ic2eq;
-		ic1eq += 2.0 * t1;
-		ic2eq += 2.0 * t2;
-		*/
 
 		// tick serial(possibly quicker on cpus with low latencies)
 		t0 = vin - ic2eq;

@@ -69,6 +69,71 @@ tresult PLUGIN_API RFEQ_Processor::setActive (TBool state)
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 {
+	Vst::IParameterChanges* paramChanges = data.inputParameterChanges;
+
+	if (paramChanges)
+	{
+		int32 numParamsChanged = paramChanges->getParameterCount();
+
+		for (int32 index = 0; index < numParamsChanged; index++)
+		{
+			Vst::IParamValueQueue* paramQueue = paramChanges->getParameterData(index);
+
+			if (paramQueue)
+			{
+				Vst::ParamValue value;
+				int32 sampleOffset;
+				int32 numPoints = paramQueue->getPointCount();
+
+				/*/*/
+				if (paramQueue->getPoint(numPoints - 1, sampleOffset, value) == kResultTrue) {
+					switch (paramQueue->getParameterId()) {
+					case kParamBypass: bBypass = (value > 0.5f); break;
+					case kParamZoom:   fZoom = value; break;
+					case kParamLevel:  fLevel = value; break;
+					case kParamOutput: fOutput = value; break;
+						
+					case kParamBand1_In: fParamBand1_Array[ParamArray_In] = value; break;
+					case kParamBand2_In: fParamBand2_Array[ParamArray_In] = value; break;
+					case kParamBand3_In: fParamBand3_Array[ParamArray_In] = value; break;
+					case kParamBand4_In: fParamBand4_Array[ParamArray_In] = value; break;
+					case kParamBand5_In: fParamBand5_Array[ParamArray_In] = value; break;
+
+					case kParamBand1_Hz: fParamBand1_Array[ParamArray_Hz] = value; break;
+					case kParamBand2_Hz: fParamBand2_Array[ParamArray_Hz] = value; break;
+					case kParamBand3_Hz: fParamBand3_Array[ParamArray_Hz] = value; break;
+					case kParamBand4_Hz: fParamBand4_Array[ParamArray_Hz] = value; break;
+					case kParamBand5_Hz: fParamBand5_Array[ParamArray_Hz] = value; break;
+
+					case kParamBand1_Q: fParamBand1_Array[ParamArray_Q] = value; break;
+					case kParamBand2_Q: fParamBand2_Array[ParamArray_Q] = value; break;
+					case kParamBand3_Q: fParamBand3_Array[ParamArray_Q] = value; break;
+					case kParamBand4_Q: fParamBand4_Array[ParamArray_Q] = value; break;
+					case kParamBand5_Q: fParamBand5_Array[ParamArray_Q] = value; break;
+
+					case kParamBand1_dB: fParamBand1_Array[ParamArray_dB] = value; break;
+					case kParamBand2_dB: fParamBand2_Array[ParamArray_dB] = value; break;
+					case kParamBand3_dB: fParamBand3_Array[ParamArray_dB] = value; break;
+					case kParamBand4_dB: fParamBand4_Array[ParamArray_dB] = value; break;
+					case kParamBand5_dB: fParamBand5_Array[ParamArray_dB] = value; break;
+
+					case kParamBand1_Type: fParamBand1_Array[ParamArray_Type] = value; break;
+					case kParamBand2_Type: fParamBand2_Array[ParamArray_Type] = value; break;
+					case kParamBand3_Type: fParamBand3_Array[ParamArray_Type] = value; break;
+					case kParamBand4_Type: fParamBand4_Array[ParamArray_Type] = value; break;
+					case kParamBand5_Type: fParamBand5_Array[ParamArray_Type] = value; break;
+
+					case kParamBand1_Order: fParamBand1_Array[ParamArray_Order] = value; break;
+					case kParamBand2_Order: fParamBand2_Array[ParamArray_Order] = value; break;
+					case kParamBand3_Order: fParamBand3_Array[ParamArray_Order] = value; break;
+					case kParamBand4_Order: fParamBand4_Array[ParamArray_Order] = value; break;
+					case kParamBand5_Order: fParamBand5_Array[ParamArray_Order] = value; break;
+					}
+				}
+			}
+		}
+	}
+
 	if (data.numInputs == 0 || data.numOutputs == 0)
 	{
 		// nothing to do
@@ -109,23 +174,64 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		data.outputs[0].silenceFlags = data.inputs[0].silenceFlags;
 		
 		for (int ch = 0; ch < numChannels; ch++) {
-			one[ch].setSVF(
-				true, 
-				getSampleRate,
-				SVF::_dB_to_norm(9.0), 
-				SVF::_Hz_to_norm(500.0), 
-				SVF::_Q_to_norm(2.0),
-				SVF::_Type_to_norm(SVF::kHighShelf), 
-				SVF::_Order_to_norm(SVF::_6dBoct)
+			Band1[ch].setSVF(
+				fParamBand1_Array[ParamArray_In],
+				fParamBand1_Array[ParamArray_Hz],
+				fParamBand1_Array[ParamArray_Q],
+				fParamBand1_Array[ParamArray_dB],
+				fParamBand1_Array[ParamArray_Type],
+				fParamBand1_Array[ParamArray_Order],
+				getSampleRate
 			);
-			one[ch].makeSVF();
+			Band2[ch].setSVF(
+				fParamBand2_Array[ParamArray_In],
+				fParamBand2_Array[ParamArray_Hz],
+				fParamBand2_Array[ParamArray_Q],
+				fParamBand2_Array[ParamArray_dB],
+				fParamBand2_Array[ParamArray_Type],
+				fParamBand2_Array[ParamArray_Order],
+				getSampleRate
+			);
+			Band3[ch].setSVF(
+				fParamBand3_Array[ParamArray_In],
+				fParamBand3_Array[ParamArray_Hz],
+				fParamBand3_Array[ParamArray_Q],
+				fParamBand3_Array[ParamArray_dB],
+				fParamBand3_Array[ParamArray_Type],
+				fParamBand3_Array[ParamArray_Order],
+				getSampleRate
+			);
+			Band4[ch].setSVF(
+				fParamBand4_Array[ParamArray_In],
+				fParamBand4_Array[ParamArray_Hz],
+				fParamBand4_Array[ParamArray_Q],
+				fParamBand4_Array[ParamArray_dB],
+				fParamBand4_Array[ParamArray_Type],
+				fParamBand4_Array[ParamArray_Order],
+				getSampleRate
+			);
+			Band5[ch].setSVF(
+				fParamBand5_Array[ParamArray_In],
+				fParamBand5_Array[ParamArray_Hz],
+				fParamBand5_Array[ParamArray_Q],
+				fParamBand5_Array[ParamArray_dB],
+				fParamBand5_Array[ParamArray_Type],
+				fParamBand5_Array[ParamArray_Order],
+				getSampleRate
+			);
+
 			Vst::Sample32* ptrIn = (Vst::Sample32*)in[ch];
 			Vst::Sample32* ptrOut = (Vst::Sample32*)out[ch];
 			int32 samples = data.numSamples;
 			while (--samples >= 0)
 			{
 				Vst::Sample64 inputSample = *ptrIn;
-				*ptrOut = (Vst::Sample32)one[ch].computeSVF(inputSample);
+				double v1 = Band1[ch].computeSVF(inputSample);
+				double v2 = Band2[ch].computeSVF(v1);
+				double v3 = Band3[ch].computeSVF(v2);
+				double v4 = Band4[ch].computeSVF(v3);
+				double v5 = Band5[ch].computeSVF(v4);
+				*ptrOut = (Vst::Sample32)v5;
 
 				ptrIn++;
 				ptrOut++;
@@ -161,8 +267,69 @@ tresult PLUGIN_API RFEQ_Processor::canProcessSampleSize (int32 symbolicSampleSiz
 tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
 {
 	// called when we load a preset, the model has to be reloaded
-	IBStreamer streamer (state, kLittleEndian);
-	
+	IBStreamer streamer(state, kLittleEndian);
+
+	int32           savedBypass = 0;
+	Vst::ParamValue savedZoom   = 0.0;
+	Vst::ParamValue savedLevel  = 0.0;
+	Vst::ParamValue savedOutput = 0.0;
+
+	ParamBand_Array savedBand1_Array = { 0.0, };
+	ParamBand_Array savedBand2_Array = { 0.0, };
+	ParamBand_Array savedBand3_Array = { 0.0, };
+	ParamBand_Array savedBand4_Array = { 0.0, };
+	ParamBand_Array savedBand5_Array = { 0.0, };
+
+	if (streamer.readInt32 (savedBypass) == false) return kResultFalse;
+	if (streamer.readDouble(savedZoom  ) == false) return kResultFalse;
+	if (streamer.readDouble(savedLevel ) == false) return kResultFalse;
+	if (streamer.readDouble(savedOutput) == false) return kResultFalse;
+
+	if (streamer.readDoubleArray(savedBand1_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand2_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand3_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand4_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand5_Array, ParamArray_size) == false) return kResultFalse;
+
+	bBypass = savedBypass > 0;
+	fZoom   = savedZoom;
+	fLevel  = savedLevel;
+	fOutput = savedOutput;
+
+	std::memcpy(fParamBand1_Array, savedBand1_Array, sizeof(ParamBand_Array));
+	std::memcpy(fParamBand2_Array, savedBand2_Array, sizeof(ParamBand_Array));
+	std::memcpy(fParamBand3_Array, savedBand3_Array, sizeof(ParamBand_Array));
+	std::memcpy(fParamBand4_Array, savedBand4_Array, sizeof(ParamBand_Array));
+	std::memcpy(fParamBand5_Array, savedBand5_Array, sizeof(ParamBand_Array));
+
+
+	Band1[1].copySVF(&Band1[0]);
+	Band2[1].copySVF(&Band2[0]);
+	Band3[1].copySVF(&Band3[0]);
+	Band4[1].copySVF(&Band4[0]);
+	Band5[1].copySVF(&Band5[0]);
+
+	if (Vst::Helpers::isProjectState(state) == kResultTrue)
+	{
+		// we are in project loading context...
+
+		// Example of using the IStreamAttributes interface
+		FUnknownPtr<Vst::IStreamAttributes> stream(state);
+		if (stream)
+		{
+			if (Vst::IAttributeList* list = stream->getAttributes())
+			{
+				// get the full file path of this state
+				Vst::TChar fullPath[1024];
+				memset(fullPath, 0, 1024 * sizeof(Vst::TChar));
+				if (list->getString(Vst::PresetAttributes::kFilePathStringType, fullPath,
+					1024 * sizeof(Vst::TChar)) == kResultTrue)
+				{
+					// here we have the full path ...
+				}
+			}
+		}
+	}
 	return kResultOk;
 }
 
@@ -170,7 +337,18 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
 tresult PLUGIN_API RFEQ_Processor::getState (IBStream* state)
 {
 	// here we need to save the model
-	IBStreamer streamer (state, kLittleEndian);
+	IBStreamer streamer(state, kLittleEndian);
+
+	streamer.writeInt32(bBypass ? 1 : 0);
+	streamer.writeDouble(fZoom);
+	streamer.writeDouble(fLevel);
+	streamer.writeDouble(fOutput);
+
+	streamer.writeDoubleArray(fParamBand1_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand2_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand3_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand4_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand5_Array, ParamArray_size);
 
 	return kResultOk;
 }

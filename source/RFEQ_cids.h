@@ -14,22 +14,6 @@ static const Steinberg::FUID kRFEQ_ControllerUID (0x7F073B47, 0x0EFA53C7, 0xBFCE
 
 #define RFEQ_VST3Category "Fx"
 
-struct ZoomFactor {
-	const Steinberg::tchar* title;
-	double factor;
-
-	ZoomFactor(const Steinberg::tchar* title, double factor) : title(title), factor(factor) {}
-};
-typedef std::vector<ZoomFactor> ZoomFactorVector;
-
-typedef enum {
-	overSample_1x,
-	overSample_2x,
-	overSample_4x,
-	overSample_8x,
-	overSample_num = 3
-} overSample;
-
 enum {
 	kParamBypass = 0,
 	kParamZoom,
@@ -37,7 +21,6 @@ enum {
 	kParamLevel,
 	kParamOutput,
 
-	// In, freq, Q, gain, type, order(PassFilters)
 	kParamBand1_In,
 	kParamBand2_In,
 	kParamBand3_In,
@@ -62,17 +45,17 @@ enum {
 	kParamBand4_dB,
 	kParamBand5_dB,
 
-	kParamBand1_type,
-	kParamBand2_type,
-	kParamBand3_type,
-	kParamBand4_type,
-	kParamBand5_type,
+	kParamBand1_Type,
+	kParamBand2_Type,
+	kParamBand3_Type,
+	kParamBand4_Type,
+	kParamBand5_Type,
 
-	kParamBand1_order,
-	kParamBand2_order,
-	kParamBand3_order,
-	kParamBand4_order,
-	kParamBand5_order,
+	kParamBand1_Order,
+	kParamBand2_Order,
+	kParamBand3_Order,
+	kParamBand4_Order,
+	kParamBand5_Order,
 };
 
 const bool

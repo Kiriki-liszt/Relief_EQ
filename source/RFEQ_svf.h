@@ -9,6 +9,28 @@
 #define M_SQRT2    1.41421356237309504880   // sqrt(2)
 #endif
 
+
+typedef enum {
+	overSample_1x,
+	overSample_2x,
+	overSample_4x,
+	overSample_8x,
+	overSample_num = 3
+} overSample;
+
+typedef enum {
+	ParamArray_In,
+	ParamArray_Hz,
+	ParamArray_Q,
+	ParamArray_dB,
+	ParamArray_Type,
+	ParamArray_Order,
+	ParamArray_size
+} ParamArray;
+
+// In, Hz, Q, dB, Type, Order
+typedef double ParamBand_Array[ParamArray_size];
+
 /*
 
 Filters will have six parameters;
@@ -130,40 +152,43 @@ public:
 	void copySVF(SVF* src)
 	{
 		this->In = src->In;
-		this->dB = src->dB;
 		this->Hz = src->Hz;
 		this->Q = src->Q;
+		this->dB = src->dB;
 		this->Type = src->Type;
 		this->Fs = src->Fs;
+
+		this->w = src->w;
+		this->g = src->g;
+		this->k = src->k;
 
 		this->gt0 = src->gt0;
 		this->gk0 = src->gk0;
 		this->m0 = src->m0;
 		this->m1 = src->m1;
 		this->m2 = src->m2;
+
+		this->Type = src->Type;
+		this->Order = src->Order;
 		return;
 	}
 
-	void setSVF(double fParamIn, double fParamFs, double fParamdB, double fParamHz, double fParamQ, double fParamtype, double fParamOrder)
+	void setSVF(double fParamIn, double fParamHz, double fParamQ, double fParamdB, double fParamtype, double fParamOrder, double fParamFs)
 	{
 		In = fParamIn ? 1 : 0;
-
 		Fs = fParamFs;
-
 		Hz = _norm_to_Hz(fParamHz);
-
 		Q = _norm_to_Q(fParamQ);
-
 		dB = _norm_to_dB(fParamdB);
-
 		Type = _norm_to_Type(fParamtype);
-
 		Order = _norm_to_Order(fParamOrder);
+
+		makeSVF();
 	}
 
 	void makeSVF()
 	{
-		
+		if (Hz > Fs / 2.0) Hz = Fs / 2.0;
 		w = Hz * M_PI / Fs;
 		g = tan(w);
 		k = 2.0 / Q;
@@ -187,8 +212,8 @@ public:
 		case kLowPass:      m0 = 0;   m1 = 0;   m2 = 1;   break;
 		case kHighPass:     m0 = 1;   m1 = 0;   m2 = 0;   break;
 		case kBell:         m0 = 1;   m1 = kmA; m2 = 1;   g = g;    k = kdA;   break;
-		case kLowShelf:     m0 = 1;   m1 = 0;   m2 = AmA; g = gdA;  break;
-		case kHighShelf:    m0 = AmA; m1 = 0;   m2 = 1;   g = gmA;  break;
+		case kLowShelf:     m0 = 1;   m1 = 0;   m2 = AmA; g = gdA;  k = 1 - g; break;
+		case kHighShelf:    m0 = AmA; m1 = 0;   m2 = 1;   g = gmA;  k = 1 - g; break;
 		case kLowShelfHiQ:  m0 = 1;   m1 = smA; m2 = AmA; g = gdSA; k = s;     break;
 		case kHighShelfHiQ: m0 = AmA; m1 = smA; m2 = 1;   g = gmSA; k = s;     break;
 		default: break;
@@ -205,16 +230,17 @@ public:
 	{
 		if (Type == kLowShelf  || 
 			Type == kHighShelf || 
-			(Type == kLowPass  || Order == _6dBoct) || 
-			(Type == kHighPass || Order == _6dBoct)) {
+			(Type == kLowPass  && Order == _6dBoct) || 
+			(Type == kHighPass && Order == _6dBoct)) {
 
 			// disable v1 stage
 			t0 = vin - ic2eq;
-			v0 = gt0 * t0; 
+			v0 = t0 / (1.0 + g);// gt0 * t0; 
 			t2 = g * v0;
 			v2 = ic2eq + t2;
 			ic2eq += 2.0 * t2;
 
+			if (In != 1) return vin;
 			return m0 * v0 + m2 * v2;
 		}
 
@@ -228,6 +254,7 @@ public:
 		ic1eq += 2.0 * t1;
 		ic2eq += 2.0 * t2;
 
+		if (In != 1) return vin;
 		return m0 * v0 + m1 * v1 + m2 * v2;	
 	};
 
@@ -291,7 +318,7 @@ public:
 	static double getdBMax()   { return  12.0; };
 	static double getdBMin()   { return -12.0; };
 	static double getQMax()    { return 25.6; };
-	static double getQMin()    { return 0.5; };
+	static double getQMin()    { return 0.1; };
 
 	static double Init_Band1_Hz() { return 80.0; };
 	static double Init_Band2_Hz() { return 200.0; };

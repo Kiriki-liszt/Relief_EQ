@@ -1,6 +1,8 @@
 #include <windows.h>
 #include "../source/version.h"
 
+RFEQ_editor.uidesc DATA "RFEQ_editor.uidesc"
+
 #define APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////

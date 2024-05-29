@@ -22,7 +22,8 @@ smtg_enable_vst3_sdk()
 smtg_add_vst3plugin(TestEQ_01
     source/version.h
     source/RFEQ_cids.h
-    source/RFEQ_svf.h
+    source/RFEQ_svf.h           # added
+    source/RFEQ_dataexchange.h  # added
     source/RFEQ_processor.h
     source/RFEQ_processor.cpp
     source/RFEQ_controller.h

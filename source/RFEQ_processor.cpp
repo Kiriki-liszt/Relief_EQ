@@ -173,52 +173,23 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 
 		data.outputs[0].silenceFlags = data.inputs[0].silenceFlags;
 		
+#define SVF_set_func(Band, Array, channel) \
+	Band[channel].setSVF( \
+		Array[ParamArray_In],\
+		Array[ParamArray_Hz],\
+		Array[ParamArray_Q],\
+		Array[ParamArray_dB],\
+		Array[ParamArray_Type],\
+		Array[ParamArray_Order],\
+		getSampleRate\
+	);
+
 		for (int ch = 0; ch < numChannels; ch++) {
-			Band1[ch].setSVF(
-				fParamBand1_Array[ParamArray_In],
-				fParamBand1_Array[ParamArray_Hz],
-				fParamBand1_Array[ParamArray_Q],
-				fParamBand1_Array[ParamArray_dB],
-				fParamBand1_Array[ParamArray_Type],
-				fParamBand1_Array[ParamArray_Order],
-				getSampleRate
-			);
-			Band2[ch].setSVF(
-				fParamBand2_Array[ParamArray_In],
-				fParamBand2_Array[ParamArray_Hz],
-				fParamBand2_Array[ParamArray_Q],
-				fParamBand2_Array[ParamArray_dB],
-				fParamBand2_Array[ParamArray_Type],
-				fParamBand2_Array[ParamArray_Order],
-				getSampleRate
-			);
-			Band3[ch].setSVF(
-				fParamBand3_Array[ParamArray_In],
-				fParamBand3_Array[ParamArray_Hz],
-				fParamBand3_Array[ParamArray_Q],
-				fParamBand3_Array[ParamArray_dB],
-				fParamBand3_Array[ParamArray_Type],
-				fParamBand3_Array[ParamArray_Order],
-				getSampleRate
-			);
-			Band4[ch].setSVF(
-				fParamBand4_Array[ParamArray_In],
-				fParamBand4_Array[ParamArray_Hz],
-				fParamBand4_Array[ParamArray_Q],
-				fParamBand4_Array[ParamArray_dB],
-				fParamBand4_Array[ParamArray_Type],
-				fParamBand4_Array[ParamArray_Order],
-				getSampleRate
-			);
-			Band5[ch].setSVF(
-				fParamBand5_Array[ParamArray_In],
-				fParamBand5_Array[ParamArray_Hz],
-				fParamBand5_Array[ParamArray_Q],
-				fParamBand5_Array[ParamArray_dB],
-				fParamBand5_Array[ParamArray_Type],
-				fParamBand5_Array[ParamArray_Order],
-				getSampleRate
-			);
+			SVF_set_func(Band1, fParamBand1_Array, ch)
+			SVF_set_func(Band2, fParamBand2_Array, ch)
+			SVF_set_func(Band3, fParamBand3_Array, ch)
+			SVF_set_func(Band4, fParamBand4_Array, ch)
+			SVF_set_func(Band5, fParamBand5_Array, ch)
 
 			Vst::Sample32* ptrIn = (Vst::Sample32*)in[ch];
 			Vst::Sample32* ptrOut = (Vst::Sample32*)out[ch];
@@ -231,6 +202,7 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 				double v3 = Band3[ch].computeSVF(v2);
 				double v4 = Band4[ch].computeSVF(v3);
 				double v5 = Band5[ch].computeSVF(v4);
+				if (bBypass == 1) v5 = inputSample;
 				*ptrOut = (Vst::Sample32)v5;
 
 				ptrIn++;

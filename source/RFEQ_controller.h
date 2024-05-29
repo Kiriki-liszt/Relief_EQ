@@ -95,8 +95,8 @@ protected:
 		(Steinberg::tchar*)STR("Bell"),
 		(Steinberg::tchar*)STR("Low Shelf"),
 		(Steinberg::tchar*)STR("High Shelf"),
-		(Steinberg::tchar*)STR("Low Shelf Hi-Q"),
-		(Steinberg::tchar*)STR("High Shelf Hi-Q"),
+		(Steinberg::tchar*)STR("LowShelf +"),
+		(Steinberg::tchar*)STR("HighShelf +"),
 		(Steinberg::tchar*)STR("Low Pass"),
 		(Steinberg::tchar*)STR("High Pass")
 	};

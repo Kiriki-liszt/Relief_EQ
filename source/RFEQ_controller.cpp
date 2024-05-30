@@ -8,7 +8,524 @@
 #include "pluginterfaces/base/ustring.h"
 #include "base/source/fstreamer.h"
 
+//#include "vstgui/vstgui.h"
+#include "vstgui/vstgui_uidescription.h"
+#include "vstgui/uidescription/detail/uiviewcreatorattributes.h"
+
 using namespace Steinberg;
+
+namespace VSTGUI {
+	//------------------------------------------------------------------------
+	//  TextEdit with Knob mouse control
+	//------------------------------------------------------------------------
+	static constexpr CViewAttributeID kCKnobTextMouseStateAttribute = 'ktms';
+	static const std::string kAttrMinPlain = "min-plain";
+	static const std::string kAttrMaxPlain = "max-plain";
+	static const std::string kAttrLogScale = "Log-Scale";
+	//------------------------------------------------------------------------
+#if TARGET_OS_IPHONE
+	static const float kCKnobTextRange = 300.f;
+#else
+	static const float kCKnobTextRange = 200.f;
+#endif
+	struct MyKnobText::MouseEditingState
+	{
+		CPoint firstPoint;
+		CPoint lastPoint;
+		float startValue;
+		float entryState;
+		float range;
+		float coef;
+		CButtonState oldButton;
+		bool modeLinear;
+	};
+	MyKnobText::MyKnobText(
+		const CRect& size,
+		IControlListener* listener,
+		int32_t tag,
+		UTF8StringPtr txt,
+		CBitmap* background,
+		const int32_t style
+	)
+		: CTextEdit(size, listener, tag, txt, background)
+	{
+		rangeAngle = 1.f;
+		setStartAngle((float)(3.f * Constants::quarter_pi));
+		setRangeAngle((float)(3.f * Constants::half_pi));
+		zoomFactor = 1.5f;
+		minPlain = 20.0;
+		maxPlain = 22000.0;
+		logScale = false;
+	}
+
+	MyKnobText::MyKnobText(const MyKnobText& v)
+		: CTextEdit(v)
+		, startAngle(v.startAngle)
+		, rangeAngle(v.rangeAngle)
+		, zoomFactor(v.zoomFactor)
+		, inset(v.inset)
+		, minPlain(v.minPlain)
+		, maxPlain(v.maxPlain)
+		, logScale(v.logScale)
+	{
+	}
+
+	void  MyKnobText::valueToPoint(CPoint& point) const {
+		float alpha = (value - getMin()) / (getMax() - getMin());
+		alpha = startAngle + alpha * rangeAngle;
+
+		CPoint c(getViewSize().getWidth() / 2., getViewSize().getHeight() / 2.);
+		double xradius = c.x - inset;
+		double yradius = c.y - inset;
+
+		point.x = (CCoord)(c.x + cosf(alpha) * xradius + 0.5f);
+		point.y = (CCoord)(c.y + sinf(alpha) * yradius + 0.5f);
+	}
+
+	float MyKnobText::valueFromPoint(CPoint& point) const {
+		float v;
+		double d = rangeAngle * 0.5;
+		double a = startAngle + d;
+
+		CPoint c(getViewSize().getWidth() / 2., getViewSize().getHeight() / 2.);
+		double xradius = c.x - inset;
+		double yradius = c.y - inset;
+
+		double dx = (point.x - c.x) / xradius;
+		double dy = (point.y - c.y) / yradius;
+
+		double alpha = atan2(dy, dx) - a;
+		while (alpha >= Constants::pi)
+			alpha -= Constants::double_pi;
+		while (alpha < -Constants::pi)
+			alpha += Constants::double_pi;
+
+		if (d < 0.0)
+			alpha = -alpha;
+
+		if (alpha > d)
+			v = getMax();
+		else if (alpha < -d)
+			v = getMin();
+		else
+		{
+			v = float(0.5 + alpha / rangeAngle);
+			v = getMin() + (v * getRange());
+		}
+
+		return v;
+	};
+
+	// overrides
+	void MyKnobText::setText(const UTF8String& txt) {
+		float val = getValue();
+		val = atof(txt.getString().c_str());
+		if (getLogScale())
+			val = log(val / getMinPlain()) / log(getMaxPlain() / getMinPlain());
+		else
+			val = (val - getMinPlain()) / (getMaxPlain() - getMinPlain());
+		CTextLabel::setValue(val);
+		CTextEdit::setText(txt);
+	};
+
+	void MyKnobText::onMouseWheelEvent(MouseWheelEvent& event) {
+		onMouseWheelEditing(this);
+
+		float v = getValueNormalized();
+		if (buttonStateFromEventModifiers(event.modifiers) & kZoomModifier)
+			v += 0.1f * static_cast<float> (event.deltaY) * getWheelInc();
+		else
+			v += static_cast<float> (event.deltaY) * getWheelInc();
+		setValueNormalized(v);
+
+		if (isDirty())
+		{
+			invalid();
+			valueChanged();
+		}
+		event.consumed = true;
+	};
+
+	void MyKnobText::onKeyboardEvent(KeyboardEvent& event) {
+
+		if (!platformControl || event.type != EventType::KeyDown)
+			return;
+
+		if (event.virt == VirtualKey::Escape)
+		{
+			bWasReturnPressed = false;
+			platformControl->setText(text);
+			getFrame()->setFocusView(nullptr);
+			looseFocus();
+			event.consumed = true;
+		}
+		else if (event.virt == VirtualKey::Return)
+		{
+			bWasReturnPressed = true;
+			getFrame()->setFocusView(nullptr);
+			looseFocus();
+			event.consumed = true;
+		}
+
+
+		if (event.type != EventType::KeyDown)
+			return;
+		switch (event.virt)
+		{
+		case VirtualKey::Up:
+		case VirtualKey::Right:
+		case VirtualKey::Down:
+		case VirtualKey::Left:
+		{
+			float distance = 1.f;
+			if (event.virt == VirtualKey::Down || event.virt == VirtualKey::Left)
+				distance = -distance;
+
+			float v = getValueNormalized();
+			if (buttonStateFromEventModifiers(event.modifiers) & kZoomModifier)
+				v += 0.1f * distance * getWheelInc();
+			else
+				v += distance * getWheelInc();
+			setValueNormalized(v);
+
+			if (isDirty())
+			{
+				invalid();
+				beginEdit();
+				valueChanged();
+				endEdit();
+			}
+			event.consumed = true;
+		}
+		case VirtualKey::Escape:
+		{
+			if (isEditing())
+			{
+				onMouseCancel();
+				event.consumed = true;
+			}
+			break;
+		}
+		default: return;
+		}
+	}
+
+	void MyKnobText::setViewSize(const CRect& rect, bool invalid)
+	{
+		CControl::setViewSize(rect, invalid);
+		compute();
+	}
+
+	bool MyKnobText::sizeToFit() {
+		if (getDrawBackground())
+		{
+			CRect vs(getViewSize());
+			vs.setWidth(getDrawBackground()->getWidth());
+			vs.setHeight(getDrawBackground()->getHeight());
+			setViewSize(vs);
+			setMouseableArea(vs);
+			return true;
+		}
+		return false;
+	}
+
+	CMouseEventResult MyKnobText::onMouseDown(CPoint& where, const CButtonState& buttons) {
+		if (!buttons.isLeftButton())
+			return kMouseEventNotHandled;
+
+		if (getFrame()->getFocusView() != this)
+		{
+			if (isDoubleClickStyle() && (buttons & kDoubleClick))
+			{
+				takeFocus();
+				return kMouseDownEventHandledButDontNeedMovedOrUpEvents;
+			}
+
+			// takeFocus();
+		}
+
+		CMouseWheelEditingSupport::invalidMouseWheelEditTimer(this);
+		beginEdit();
+
+		auto& mouseState = getMouseEditingState();
+		mouseState.firstPoint = where;
+		mouseState.lastPoint(-1, -1);
+		mouseState.startValue = getOldValue();
+
+		mouseState.modeLinear = false;
+		mouseState.entryState = value;
+		mouseState.range = kCKnobTextRange;
+		mouseState.coef = (getMax() - getMin()) / mouseState.range;
+		mouseState.oldButton = buttons;
+
+		int32_t mode = kCircularMode;
+		int32_t newMode = getFrame()->getKnobMode();
+		if (kLinearMode == newMode)
+		{
+			if (!(buttons & kAlt))
+				mode = newMode;
+		}
+		else if (buttons & kAlt)
+		{
+			mode = kLinearMode;
+		}
+
+		if (mode == kLinearMode)
+		{
+			if (buttons & kZoomModifier)
+				mouseState.range *= zoomFactor;
+			mouseState.lastPoint = where;
+			mouseState.modeLinear = true;
+			mouseState.coef = (getMax() - getMin()) / mouseState.range;
+		}
+		else
+		{
+			CPoint where2(where);
+			where2.offset(-getViewSize().left, -getViewSize().top);
+			mouseState.startValue = valueFromPoint(where2);
+			mouseState.lastPoint = where;
+		}
+
+		return onMouseMoved(where, buttons);
+	};
+
+	CMouseEventResult MyKnobText::onMouseUp(CPoint& where, const CButtonState& buttons) {
+		if (isEditing())
+		{
+			endEdit();
+			clearMouseEditingState();
+		}
+		return kMouseEventHandled;
+	};
+
+	CMouseEventResult MyKnobText::onMouseMoved(CPoint& where, const CButtonState& buttons) {
+		if (buttons.isLeftButton() && isEditing())
+		{
+			auto& mouseState = getMouseEditingState();
+
+			float middle = (getMax() - getMin()) * 0.5f;
+
+			if (where != mouseState.lastPoint)
+			{
+				mouseState.lastPoint = where;
+				if (mouseState.modeLinear)
+				{
+					CCoord diff = (mouseState.firstPoint.y - where.y) + (where.x - mouseState.firstPoint.x);
+					if (buttons != mouseState.oldButton)
+					{
+						mouseState.range = kCKnobTextRange;
+						if (buttons & kZoomModifier)
+							mouseState.range *= zoomFactor;
+
+						float coef2 = (getMax() - getMin()) / mouseState.range;
+						mouseState.entryState += (float)(diff * (mouseState.coef - coef2));
+						mouseState.coef = coef2;
+						mouseState.oldButton = buttons;
+					}
+					//value = (float)(mouseState.entryState + diff * mouseState.coef);
+					setValue((float)(mouseState.entryState + diff * mouseState.coef));
+					bounceValue();
+				}
+				else
+				{
+					where.offset(-getViewSize().left, -getViewSize().top);
+					//value = valueFromPoint(where); 
+					setValue(valueFromPoint(where));
+					if (mouseState.startValue - value > middle)
+						setValue(getMax()); // value = getMax();
+					else if (value - mouseState.startValue > middle)
+						setValue(getMin()); // value = getMin();
+					else
+						mouseState.startValue = value;
+				}
+				if (value != getOldValue())
+					valueChanged();
+				if (isDirty())
+					invalid();
+			}
+			return kMouseEventHandled;
+		}
+		return kMouseEventNotHandled;
+	};
+
+	CMouseEventResult MyKnobText::onMouseCancel() {
+		if (isEditing())
+		{
+			auto& mouseState = getMouseEditingState();
+			//value = mouseState.startValue;
+			setValue(mouseState.startValue);
+			if (isDirty())
+			{
+				valueChanged();
+				invalid();
+			}
+			endEdit();
+			clearMouseEditingState();
+		}
+		return kMouseEventHandled;
+	};
+
+	auto MyKnobText::getMouseEditingState() -> MouseEditingState& {
+		MouseEditingState* state = nullptr;
+		if (!getAttribute(kCKnobTextMouseStateAttribute, state))
+		{
+			state = new MouseEditingState;
+			setAttribute(kCKnobTextMouseStateAttribute, state);
+		}
+		return *state;
+	};
+
+	void MyKnobText::clearMouseEditingState() {
+		MouseEditingState* state = nullptr;
+		if (!getAttribute(kCKnobTextMouseStateAttribute, state))
+			return;
+		delete state;
+		removeAttribute(kCKnobTextMouseStateAttribute);
+	};
+
+	//------------------------------------------------------------------------
+	//  Factory for TextEdit
+	//------------------------------------------------------------------------
+	class MyKnobTextFactory : public ViewCreatorAdapter
+	{
+	public:
+		//register this class with the view factory
+		MyKnobTextFactory() { UIViewFactory::registerViewCreator(*this); }
+
+		//return an unique name here
+		IdStringPtr getViewName() const override { return "KnobText"; }
+
+		//return the name here from where your custom view inherites.
+		//	Your view automatically supports the attributes from it.
+		IdStringPtr getBaseViewName() const override { return UIViewCreator::kCTextEdit; }
+
+		//create your view here.
+		//	Note you don't need to apply attributes here as
+		//	the apply method will be called with this new view
+		CView* create(const UIAttributes& attributes, const IUIDescription* description) const override
+		{
+			return new MyKnobText(CRect(0, 0, 100, 20), nullptr, -1, nullptr, nullptr);
+		}
+		bool apply(
+			CView* view,
+			const UIAttributes& attributes,
+			const IUIDescription* description) const
+		{
+			auto* KnobText = dynamic_cast<MyKnobText*> (view);
+
+			if (!KnobText)
+				return false;
+
+			double d;
+			if (attributes.getDoubleAttribute(UIViewCreator::kAttrAngleStart, d))
+			{
+				// convert from degree
+				d = d / 180.f * static_cast<float> (Constants::pi);
+				KnobText->setStartAngle(static_cast<float> (d));
+			}
+			if (attributes.getDoubleAttribute(UIViewCreator::kAttrAngleRange, d))
+			{
+				// convert from degree
+				d = d / 180.f * static_cast<float> (Constants::pi);
+				KnobText->setRangeAngle(static_cast<float> (d));
+			}
+			if (attributes.getDoubleAttribute(UIViewCreator::kAttrValueInset, d))
+				KnobText->setInsetValue(d);
+			if (attributes.getDoubleAttribute(UIViewCreator::kAttrZoomFactor, d))
+				KnobText->setZoomFactor(static_cast<float> (d));
+			if (attributes.getDoubleAttribute(kAttrMinPlain, d))
+				KnobText->setMinPlain(static_cast<float> (d));
+			if (attributes.getDoubleAttribute(kAttrMaxPlain, d))
+				KnobText->setMaxPlain(static_cast<float> (d));
+
+			bool b;
+			if (attributes.getBooleanAttribute(kAttrLogScale, b))
+				KnobText->setLogScale(b);
+
+			return true;
+		}
+
+		bool getAttributeNames(StringList& attributeNames) const
+		{
+			attributeNames.emplace_back(UIViewCreator::kAttrAngleStart);
+			attributeNames.emplace_back(UIViewCreator::kAttrAngleRange);
+			attributeNames.emplace_back(UIViewCreator::kAttrValueInset);
+			attributeNames.emplace_back(UIViewCreator::kAttrZoomFactor);
+			attributeNames.emplace_back(kAttrMinPlain);
+			attributeNames.emplace_back(kAttrMaxPlain);
+			attributeNames.emplace_back(kAttrLogScale);
+			return true;
+		}
+
+		AttrType getAttributeType(const std::string& attributeName) const
+		{
+			if (attributeName == UIViewCreator::kAttrAngleStart)
+				return kFloatType;
+			if (attributeName == UIViewCreator::kAttrAngleRange)
+				return kFloatType;
+			if (attributeName == UIViewCreator::kAttrValueInset)
+				return kFloatType;
+			if (attributeName == UIViewCreator::kAttrZoomFactor)
+				return kFloatType;
+			if (attributeName == kAttrMinPlain)
+				return kFloatType;
+			if (attributeName == kAttrMaxPlain)
+				return kFloatType; 
+			if (attributeName == kAttrLogScale)
+				return kBooleanType;
+			return kUnknownType;
+		}
+
+		//------------------------------------------------------------------------
+		bool getAttributeValue(
+			CView* view,
+			const string& attributeName,
+			string& stringValue,
+			const IUIDescription* desc) const
+		{
+			auto* KnobText = dynamic_cast<MyKnobText*> (view);
+			if (!KnobText)
+				return false;
+
+			if (attributeName == UIViewCreator::kAttrAngleStart)
+			{
+				stringValue =
+					UIAttributes::doubleToString((KnobText->getStartAngle() / Constants::pi * 180.), 5);
+				return true;
+			}
+			if (attributeName == UIViewCreator::kAttrAngleRange)
+			{
+				stringValue =
+					UIAttributes::doubleToString((KnobText->getRangeAngle() / Constants::pi * 180.), 5);
+				return true;
+			}
+			if (attributeName == UIViewCreator::kAttrValueInset)
+			{
+				stringValue = UIAttributes::doubleToString(KnobText->getInsetValue());
+				return true;
+			}
+			if (attributeName == kAttrMinPlain)
+			{
+				stringValue = UIAttributes::doubleToString(KnobText->getMinPlain());
+				return true;
+			}
+			if (attributeName == kAttrMaxPlain)
+			{
+				stringValue = UIAttributes::doubleToString(KnobText->getMaxPlain());
+				return true;
+			}
+			if (attributeName == kAttrLogScale)
+			{
+				stringValue = KnobText->getLogScale() ? UIViewCreator::strTrue : UIViewCreator::strFalse;
+				return true;
+			}
+			return false; 
+		}
+	};
+
+	//create a static instance so that it registers itself with the view factory
+	MyKnobTextFactory __gMyMyKnobTextFactory;
+} // namespace VSTGUI
 
 namespace yg331 {
 

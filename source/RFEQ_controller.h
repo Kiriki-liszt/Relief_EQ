@@ -10,6 +10,88 @@
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
 
+#include "vstgui/lib/controls/cknob.h"
+
+
+namespace VSTGUI {
+	//------------------------------------------------------------------------
+	//  TextEdit with Knob mouse control
+	//------------------------------------------------------------------------
+	class MyKnobText : public CTextEdit, protected CMouseWheelEditingSupport {
+	public:
+		
+		MyKnobText::MyKnobText(const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr txt, CBitmap* background = nullptr, const int32_t style = 0 );
+		MyKnobText::MyKnobText(const MyKnobText& v);
+
+		virtual void  setMinPlain(float val)     { minPlain = val; }
+		virtual float getMinPlain() const        { return minPlain; }
+		virtual void  setMaxPlain(float val)     { maxPlain = val; }
+		virtual float getMaxPlain() const        { return maxPlain; }
+		int32_t       getLogScale() const        { return logScale; }
+		virtual void  setLogScale(int32_t style) { if (style != logScale) { logScale = style; setDirty(); } };
+
+		//-----------------------------------------------------------------------------
+		/// @name CKnobBase Methods
+		//-----------------------------------------------------------------------------
+		//@{
+		virtual void  valueToPoint  (CPoint& point) const;
+		virtual float valueFromPoint(CPoint& point) const;
+
+		virtual void  setStartAngle(float val) { startAngle = val; compute(); };
+		virtual float getStartAngle() const    { return startAngle; }
+
+		virtual void  setRangeAngle(float val) { rangeAngle = val; compute(); };
+		virtual float getRangeAngle() const    { return rangeAngle; }
+
+		virtual void  setZoomFactor(float val) { zoomFactor = val; }
+		virtual float getZoomFactor() const    { return zoomFactor; }
+
+		virtual CCoord getInsetValue() const   { return inset; }
+		virtual void  setInsetValue(CCoord val) { inset = val; }
+		//@}
+
+		//-----------------------------------------------------------------------------
+		// overrides
+		//-----------------------------------------------------------------------------
+		void setText          (const UTF8String& txt)  override;
+		void onMouseWheelEvent(MouseWheelEvent& event) override;
+		void onKeyboardEvent  (KeyboardEvent& event)   override ;
+		void setViewSize      (const CRect& rect, bool invalid = true) override ;
+		bool sizeToFit        () override;
+		void setMin(float val) override { CControl::setMin(val); if (getValue() < val) { setValue(val); } compute(); };
+		void setMax(float val) override { CControl::setMax(val); if (getValue() > val) { setValue(val); } compute(); };
+
+		CMouseEventResult onMouseDown  (CPoint& where, const CButtonState& buttons) override;
+		CMouseEventResult onMouseUp    (CPoint& where, const CButtonState& buttons) override;
+		CMouseEventResult onMouseMoved (CPoint& where, const CButtonState& buttons) override;
+		CMouseEventResult onMouseCancel() override;
+
+		CLASS_METHODS(MyKnobText, CTextEdit)
+
+	protected:
+		~MyKnobText() noexcept override {};
+
+		void compute() {
+			setDirty();
+		};
+
+		float startAngle, rangeAngle;
+		float zoomFactor;
+		float minPlain, maxPlain;
+		int32_t logScale;
+		CCoord inset;
+
+	private:
+		struct MouseEditingState;
+
+		MouseEditingState& getMouseEditingState();
+		void clearMouseEditingState();
+	};
+
+
+}
+
+
 namespace yg331 {
 
 //------------------------------------------------------------------------
@@ -95,8 +177,8 @@ protected:
 		(Steinberg::tchar*)STR("Bell"),
 		(Steinberg::tchar*)STR("Low Shelf"),
 		(Steinberg::tchar*)STR("High Shelf"),
-		(Steinberg::tchar*)STR("LowShelf +"),
-		(Steinberg::tchar*)STR("HighShelf +"),
+		(Steinberg::tchar*)STR("L Shelf 12"),
+		(Steinberg::tchar*)STR("H Shelf 12"),
 		(Steinberg::tchar*)STR("Low Pass"),
 		(Steinberg::tchar*)STR("High Pass")
 	};

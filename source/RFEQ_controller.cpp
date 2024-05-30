@@ -383,6 +383,12 @@ namespace VSTGUI {
 		removeAttribute(kCKnobTextMouseStateAttribute);
 	};
 
+
+
+	static const std::string kAttrBackColor = "back-color";
+	static const std::string kAttrBorderColor = "border-color";
+	static const std::string kAttrLineColor = "line-color";
+
 	//------------------------------------------------------------------------
 	//  Factory for TextEdit
 	//------------------------------------------------------------------------
@@ -523,8 +529,102 @@ namespace VSTGUI {
 		}
 	};
 
+	class MyEQCurveViewFactory : public ViewCreatorAdapter
+	{
+	public:
+		//register this class with the view factory
+		MyEQCurveViewFactory() { UIViewFactory::registerViewCreator(*this); }
+
+		//return an unique name here
+		IdStringPtr getViewName() const override { return "EQ Curve View"; }
+
+		//return the name here from where your custom view inherites.
+		//	Your view automatically supports the attributes from it.
+		IdStringPtr getBaseViewName() const override { return UIViewCreator::kCControl; }
+
+		//create your view here.
+		//	Note you don't need to apply attributes here as
+		//	the apply method will be called with this new view
+		CView* create(const UIAttributes& attributes, const IUIDescription* description) const override
+		{
+			return new EQCurveView(CRect(0, 0, 100, 20), nullptr, -1, nullptr);
+		}
+		bool apply(
+			CView* view,
+			const UIAttributes& attributes,
+			const IUIDescription* description) const
+		{
+			auto* v = dynamic_cast<EQCurveView*> (view);
+
+			if (!v)
+				return false;
+
+			CColor color;
+			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrBackColor), color, description))
+				v->setBackColor(color);
+			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrBorderColor), color, description))
+				v->setBorderColor(color);
+			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrLineColor), color, description))
+				v->setLineColor(color);
+
+			return true;
+		}
+
+		bool getAttributeNames(StringList& attributeNames) const
+		{
+			attributeNames.emplace_back(kAttrBackColor);
+			attributeNames.emplace_back(kAttrBorderColor);
+			attributeNames.emplace_back(kAttrLineColor);
+			return true;
+		}
+
+		AttrType getAttributeType(const std::string& attributeName) const
+		{
+			if (attributeName == kAttrBackColor)
+				return kColorType;
+			if (attributeName == kAttrBorderColor)
+				return kColorType;
+			if (attributeName == kAttrLineColor)
+				return kColorType;
+			return kUnknownType;
+		}
+
+		//------------------------------------------------------------------------
+		bool getAttributeValue(
+			CView* view,
+			const string& attributeName,
+			string& stringValue,
+			const IUIDescription* desc) const
+		{
+			auto* v = dynamic_cast<EQCurveView*> (view);
+
+			if (!v)
+				return false;
+
+			if (attributeName == kAttrBackColor)
+			{
+				UIViewCreator::colorToString(v->getBackColor(), stringValue, desc);
+				return true;
+			}
+			else if (attributeName == kAttrBorderColor)
+			{
+				UIViewCreator::colorToString(v->getBorderColor(), stringValue, desc);
+				return true;
+			}
+			else if (attributeName == kAttrLineColor)
+			{
+				UIViewCreator::colorToString(v->getLineColor(), stringValue, desc);
+				return true;
+			}
+
+			return false;
+		}
+	};
+
+
 	//create a static instance so that it registers itself with the view factory
-	MyKnobTextFactory __gMyMyKnobTextFactory;
+	MyKnobTextFactory    __gMyMyKnobTextFactory;
+	MyEQCurveViewFactory __gMyEQCurveViewFactory;
 } // namespace VSTGUI
 
 namespace yg331 {
@@ -800,7 +900,7 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 tresult PLUGIN_API RFEQ_Controller::terminate ()
 {
 	// Here the Plug-in will be de-instantiated, last possibility to remove some memory!
-
+	EQCurveView_saved = nullptr;
 	//---do not forget to call parent ------
 	return EditControllerEx1::terminate ();
 }
@@ -945,6 +1045,20 @@ IPlugView* PLUGIN_API RFEQ_Controller::createView (FIDString name)
 	return nullptr;
 }
 
+VSTGUI::CView* PLUGIN_API RFEQ_Controller::verifyView(
+	VSTGUI::CView* view, 
+	const VSTGUI::UIAttributes& attributes,
+	const VSTGUI::IUIDescription* description, 
+	VSTGUI::VST3Editor* editor) 
+{
+	if (auto control = dynamic_cast<VSTGUI::EQCurveView*>(view); control /* && control->getTag() == kMyTag */)
+	{
+		EQCurveView_saved = control;
+	}
+
+	return view;
+};
+
 void PLUGIN_API RFEQ_Controller::update(FUnknown* changedUnknown, int32 message)
 {
 	EditControllerEx1::update(changedUnknown, message);
@@ -1043,6 +1157,13 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	for (auto index = 0u; index < numBlocks; ++index)
 	{
 		auto dataBlock = toDataBlock(blocks[index]);
+
+		EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, 1);
+		EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, 2);
+		EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, 3);
+		EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, 4);
+		EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, 5);
+
 		/*
 		InMeter[0] = dataBlock->inL;
 		InMeter[1] = dataBlock->inR;

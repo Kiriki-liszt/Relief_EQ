@@ -60,10 +60,70 @@ tresult PLUGIN_API RFEQ_Processor::terminate ()
 }
 
 //------------------------------------------------------------------------
+tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
+{
+	auto result = Vst::AudioEffect::connect(other);
+	if (result == kResultTrue)
+	{
+		auto configCallback = [this](Vst::DataExchangeHandler::Config& config,
+			const Vst::ProcessSetup& setup) {
+				Vst::SpeakerArrangement arr;
+				getBusArrangement(Vst::BusDirections::kInput, 0, arr);
+				numChannels = static_cast<uint16_t> (Vst::SpeakerArr::getChannelCount(arr));
+				auto sampleSize = sizeof(float);
+
+				config.blockSize = sizeof(DataBlock);
+				config.numBlocks = 2;
+				//config.alignment = 32;
+				//config.userContextID = 0;
+				return true;
+			};
+
+		dataExchange = std::make_unique<Vst::DataExchangeHandler>(this, configCallback);
+		dataExchange->onConnect(other, getHostContext());
+	}
+	return result;
+}
+
+//------------------------------------------------------------------------
+tresult PLUGIN_API RFEQ_Processor::disconnect(Vst::IConnectionPoint* other)
+{
+	if (dataExchange)
+	{
+		dataExchange->onDisconnect(other);
+		dataExchange.reset();
+	}
+	return AudioEffect::disconnect(other);
+}
+
+//------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::setActive (TBool state)
 {
 	//--- called when the Plug-in is enable/disable (On/Off) -----
+	if (state)
+		dataExchange->onActivate(processSetup);
+	else
+		dataExchange->onDeactivate();
+
 	return AudioEffect::setActive (state);
+}
+
+//------------------------------------------------------------------------
+void RFEQ_Processor::acquireNewExchangeBlock()
+{
+	currentExchangeBlock = dataExchange->getCurrentOrNewBlock();
+	if (auto block = toDataBlock(currentExchangeBlock))
+	{
+		ParamBand_Array Clean = { 0.0, };
+
+		memcpy(block->Band1, Clean, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, Clean, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, Clean, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, Clean, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, Clean, ParamArray::ParamArray_size * sizeof(double));
+
+		block->Fs = 0.0;
+	}
 }
 
 //------------------------------------------------------------------------
@@ -140,15 +200,32 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		return kResultOk;
 	}
 
+	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+		acquireNewExchangeBlock();
+
 	// (simplification) we suppose in this example that we have the same input channel count than
 	// the output
-	int32 numChannels = data.inputs[0].numChannels;
+	// int32 numChannels = data.inputs[0].numChannels;
+	numChannels = data.inputs[0].numChannels;
 
 	//---get audio buffers----------------
 	uint32 sampleFramesSize = getSampleFramesSizeInBytes(processSetup, data.numSamples);
-	void** in = getChannelBuffersPointer(processSetup, data.inputs[0]);
+	void** in  = getChannelBuffersPointer(processSetup, data.inputs[0]);
 	void** out = getChannelBuffersPointer(processSetup, data.outputs[0]);
 	Vst::SampleRate getSampleRate = processSetup.sampleRate;
+
+	//--- send data ----------------
+	if (auto block = toDataBlock(currentExchangeBlock))
+	{
+		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+		block->Fs = getSampleRate;
+		dataExchange->sendCurrentBlock();
+		acquireNewExchangeBlock();
+	}
 
 	//---check if silence---------------
 	// check if all channel are silent then process silent

@@ -134,19 +134,6 @@ public:
 		initSVF();
 	};
 
-	SVF(double _Hz) :
-		dB(0.5), Hz(_Hz), Q(1.0), Fs(192000.0),
-		gt0(0.0), gk0(0.0),
-		m0(0.0), m1(0.0), m2(0.0),
-		v0(0.0), v1(0.0), v2(0.0),
-		t0(0.0), t1(0.0), t2(0.0),
-		ic1eq(0.0), ic2eq(0.0), Type(kBell)
-	{
-		//fParamHz = _Hz_to_norm(_Hz);
-		//setSVF();
-		initSVF();
-	};
-
 	void initSVF() { ic1eq = 0.0; ic2eq = 0.0; };
 
 	void copySVF(SVF* src)
@@ -175,12 +162,12 @@ public:
 
 	void setSVF(double fParamIn, double fParamHz, double fParamQ, double fParamdB, double fParamtype, double fParamOrder, double fParamFs)
 	{
-		In = fParamIn ? 1 : 0;
-		Fs = fParamFs;
-		Hz = _norm_to_Hz(fParamHz);
-		Q = _norm_to_Q(fParamQ);
-		dB = _norm_to_dB(fParamdB);
-		Type = _norm_to_Type(fParamtype);
+		In    = fParamIn ? 1 : 0;
+		Fs    = fParamFs;
+		Hz    = _norm_to_Hz(fParamHz);
+		Q     = _norm_to_Q(fParamQ);
+		dB    = _norm_to_dB(fParamdB);
+		Type  = _norm_to_Type(fParamtype);
 		Order = _norm_to_Order(fParamOrder);
 
 		makeSVF();
@@ -274,7 +261,11 @@ public:
 		double nr = 0, ni = 0;
 		double dr = 0, di = 0;
 
-		if (false/*_6dB != 0*/) {
+		if (Type == kLowShelf ||
+			Type == kHighShelf ||
+			(Type == kLowPass  && Order == _6dBoct) ||
+			(Type == kHighPass && Order == _6dBoct))
+		{
 			// Numerator complex
 			nr = zr * (-m0 /* + m1 * (g - 1) */ + m2 * g) + (m0 /* + m1 * (g + 1) */ + m2 * g);
 			ni = zi * (-m0 /* + m1 * (g - 1) */ + m2 * g);
@@ -375,16 +366,6 @@ public:
 		double tmq = getQMin() * exp(Q_LOG_MAX * paramValue);
 		return std::max(std::min(tmq, getQMax()), getQMin());
 	};
-
-	/*
-	Steinberg::Vst::ParamValue fParamIn = 1.0;
-	Steinberg::Vst::ParamValue fParamdB = _dB_to_norm(0.0);
-	Steinberg::Vst::ParamValue fParamHz = _Hz_to_norm(1000.0);
-	Steinberg::Vst::ParamValue fParamQ = _Q_to_norm(1.414);
-	Steinberg::Vst::ParamValue fParam_6dB = 0.0;
-	Steinberg::Vst::ParamValue fParamtype = _type_to_norm(kBell);
-	Steinberg::Vst::Sample64   fParamFs = 192000.0;
-	*/
 
 	filter_Type Type;
 	filter_Order Order;

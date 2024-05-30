@@ -4,6 +4,8 @@
 
 #pragma once
 
+// #include "RFEQ_svf.h"
+
 #include "public.sdk/source/vst/utility/dataexchange.h"
 #include <cstdint>
 
@@ -20,13 +22,12 @@ namespace yg331 {
 		uint32_t numSamples;
 		float samples[0];
 		*/
-		uint32_t sampleRate;
-		uint32_t numSamples;
-		float inL;
-		float inR;
-		float outL;
-		float outR;
-		float gR;
+		ParamBand_Array Band1;
+		ParamBand_Array Band2;
+		ParamBand_Array Band3;
+		ParamBand_Array Band4;
+		ParamBand_Array Band5;
+		double Fs;
 	};
 
 	//------------------------------------------------------------------------

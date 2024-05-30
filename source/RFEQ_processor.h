@@ -4,9 +4,15 @@
 
 #pragma once
 #include "RFEQ_svf.h"
+#include "RFEQ_dataexchange.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
 namespace yg331 {
+
+//------------------------------------------------------------------------
+static constexpr Steinberg::Vst::DataExchangeBlock InvalidDataExchangeBlock = {
+    nullptr, 0, Steinberg::Vst::InvalidDataExchangeBlockID
+};
 
 //------------------------------------------------------------------------
 //  RFEQ_Processor
@@ -23,15 +29,15 @@ public:
 		return (Steinberg::Vst::IAudioProcessor*)new RFEQ_Processor; 
 	}
 
-	//--- ---------------------------------------------------------------------
+	//------------------------------------------------------------------------
 	// AudioEffect overrides:
-	//--- ---------------------------------------------------------------------
+	//------------------------------------------------------------------------
 	/** Called at first after constructor */
 	Steinberg::tresult PLUGIN_API initialize (Steinberg::FUnknown* context) SMTG_OVERRIDE;
 	
 	/** Called at the end before destructor */
 	Steinberg::tresult PLUGIN_API terminate () SMTG_OVERRIDE;
-	
+
 	/** Switch the Plug-in on/off */
 	Steinberg::tresult PLUGIN_API setActive (Steinberg::TBool state) SMTG_OVERRIDE;
 
@@ -48,13 +54,23 @@ public:
 	Steinberg::tresult PLUGIN_API setState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 	Steinberg::tresult PLUGIN_API getState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 
+	//------------------------------------------------------------------------
+	// IConnectionPoint overrides:
+	//------------------------------------------------------------------------
+	/** Connects this instance with another connection point. */
+	Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
+	/** Disconnects a given connection point from this. */
+	Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
+	/** Called when a message has been sent from the connection point to this. */
+	//Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
+
 //------------------------------------------------------------------------
 protected:
 
 	bool                       bBypass = false;
 	Steinberg::Vst::ParamValue fLevel  = 0.5;
 	Steinberg::Vst::ParamValue fOutput = 0.0;
-	Steinberg::Vst::ParamValue fZoom  = 2.0 / 6.0;
+	Steinberg::Vst::ParamValue fZoom   = 2.0 / 6.0;
 	overSample                 fParamOS = overSample_2x;
 
 	ParamBand_Array fParamBand1_Array = { 1.0, SVF::_Hz_to_norm(80.0),    SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_6dBoct) };
@@ -69,6 +85,11 @@ protected:
 	SVF Band4[2];
 	SVF Band5[2];
 
+	void acquireNewExchangeBlock();
+
+	std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
+	Steinberg::Vst::DataExchangeBlock currentExchangeBlock{ InvalidDataExchangeBlock };
+	uint16_t numChannels{ 0 };
 };
 
 //------------------------------------------------------------------------

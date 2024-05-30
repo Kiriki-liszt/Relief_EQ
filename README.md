@@ -1,7 +1,53 @@
 # Relief-EQ
+
 Relief EQ is a EQ for everyday tasks, anywhere from mixing a track to master bus.  
 
-# How it started  
+Windows and Mac, VST3 and AU.  
+
+<img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
+
+## How to use  
+
+1. Windows
+
+Unzip Win.zip from latest release and copy to "C:\Program Files\Common Files\VST3".  
+
+2. MacOS(Intel tested, Apple Silicon not tested).  
+
+Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VST3" and component to "/Library/Audio/Plug-Ins/Components".  
+
+> If it doesn't go well, configure security options in console as  
+>  
+> ``` console  
+> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/VST3/Sky_Blue_EQ4.vst3  
+> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/Components/Sky_Blue_EQ4.component
+>
+> sudo codesign --force --sign - /Library/Audio/Plug-Ins/VST3/Sky_Blue_EQ4.vst3  
+> sudo codesign --force --sign - /Library/Audio/Plug-Ins/Components/Sky_Blue_EQ4.component
+> ```  
+>  
+> tested by @jonasborneland [here](https://github.com/Kiriki-liszt/JS_Inflator_to_VST2_VST3/issues/12#issuecomment-1616671177)
+
+## Licensing  
+
+> Q: I would like to share the source code of my VST 3 plug-in/host on GitHub or other such platform.  
+>
+> * You can choose the GPLv3 license and feel free to share your plug-ins/host's source code including or referencing the VST 3 SDK's sources on GitHub.  
+> * **You are allowed to provide a binary form of your plug-ins/host too, provided that you provide its source code as GPLv3 too.**  
+> * Note that you have to follow the Steinberg VST usage guidelines.  
+>  
+> <https://steinbergmedia.github.io/vst3_dev_portal/pages/FAQ/Licensing.html>  
+
+![VST Logo](https://github.com/Kiriki-liszt/Sky_Blue_EQ4/assets/107096260/142e3c12-cd5f-415d-9b72-8b4f04419633)
+
+VSTSDK 3.7.9 used  
+VSTGUI 4.12 used  
+
+## Version logs
+
+v1.0.0.b : intial try.  
+
+## How it started
 
 When I started music, I was mixing live band and some PA stuffs.  
 While doing that, I didn't really cared how EQ sounded.  
@@ -15,6 +61,7 @@ Since I major in EE, I thought there was no reason for digital EQs to sound diff
 It took a long path to do all researches of EQs and compare them.  
 
 Doing some research, there was many things that makes EQ sound different.  
+
 * Archiecture of filter implementaion
 * Bit depth
 * Cramping and De-cramping methods
@@ -24,12 +71,13 @@ Doing some research, there was many things that makes EQ sound different.
 * Q range and UI/UX
 * Shelf definition(frequency point, filter order, symmetrical or asymmetrical)
 
-Finally, I made a conclusion in these lines; 
-1. If filter runs in 64bit double precision, and not Direct Form, the 'Quality' will be about same.
-2. Oversampling does change the 'Sound' of an EQ. 
+Finally, I made a conclusion in these lines;  
+
+1. If filter runs in 64bit double precision, and not Direct Form, the 'Quality' will be about same.  
+2. Oversampling does change the 'Sound' of an EQ.  
 3. Everything else matters in 'Feeling' of an EQ.
 
-## 1. Quality  
+### 1. Quality  
 
 There are many papers and researches made about Archiecture of filters, in aspects of some points;  
 
@@ -40,7 +88,7 @@ There are many papers and researches made about Archiecture of filters, in aspec
 Long story short, a 64bit processing SVF architecture is best all-around fit.  
 It's stable, robust in math, and handles transients well.  
 
-## 2. How it sounds  
+### 2. How it sounds  
 
 It starts from cramping.  
 Nyquist Theorem lets every DSP possible, however, it cramps infinite frequency into limited range.  
@@ -66,7 +114,7 @@ Moreover, with clean digital EQs without nonlinearity, oversampling half band fi
 10 - 20 sample latency for x2 oversampling, 20 - 30 sample latency for x4 oversampling is enough for EQ.  
 Oversampled EQ will sound analog due to it's matched curve in high frequency, and naturalness of EQ is also preserved as frequency-phase relation is not touched!  
 
-## 3. How it behaves    
+### 3. How it behaves  
 
 The 'Feeling' of an EQ was more important than I thought!
 
@@ -95,7 +143,8 @@ Since the magnitude changes gradually, starts early and ends late, it feels 'tra
 
 These choices in filter design and UI will guide a specific way of using an EQ, making the perception of 'they sound different'
 
-# Tech  
+## Tech  
+
 It uses SVF State-Space archiecture for implementation of biquad filters.  
 It's better than Direct-Form implementaions in stability and error.  
 
@@ -105,12 +154,11 @@ It's to ensure there is no reason to blame sound quality of an EQ, and keep our 
 It oversamples to 96/88kHz at 48/44kHz sample rates, and does not at 96/88kHz and higher.  
 It's to keep both frequency and phase response of filters more natural and intuitive to our ears.  
 
-# Ref  
+## Ref  
 
 <https://dafx14.fau.de/papers/dafx14_aaron_wishnick_time_varying_filters_for_.pdf>  
 <https://dafx2020.mdw.ac.at/proceedings/papers/DAFx2020_paper_52.pdf>  
 <https://cytomic.com/files/dsp/SVF-vs-DF1.pdf>  
 <https://www.researchgate.net/publication/282326563>  
 <https://www.dsprelated.com/freebooks/filters/Implementation_Structures_Recursive_Digital.html>  
-
 <https://forum.juce.com/t/dsp-module-discussion-iir-filter-and-statevariablefilter/23891>  

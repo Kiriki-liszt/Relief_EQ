@@ -2,6 +2,9 @@
 
 Relief EQ is a EQ for everyday tasks, anywhere from mixing a track to master bus.  
 
+Runs in double precision 64-bit internal processing. Also double precision input / output if supported.  
+At 44.1 kHz and 48 kHz sampling rates, it upsamples to 88.2 kHz or 96 kHz respectively to do all EQ processing with 17 sample latency.  
+
 Windows and Mac, VST3 and AU.  
 
 <img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
@@ -19,11 +22,11 @@ Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VS
 > If it doesn't go well, configure security options in console as  
 >  
 > ``` console  
-> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/VST3/Sky_Blue_EQ4.vst3  
-> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/Components/Sky_Blue_EQ4.component
+> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/VST3/Relief_EQ.vst3  
+> sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/Components/Relief_EQ.component
 >
-> sudo codesign --force --sign - /Library/Audio/Plug-Ins/VST3/Sky_Blue_EQ4.vst3  
-> sudo codesign --force --sign - /Library/Audio/Plug-Ins/Components/Sky_Blue_EQ4.component
+> sudo codesign --force --sign - /Library/Audio/Plug-Ins/VST3/Relief_EQ.vst3  
+> sudo codesign --force --sign - /Library/Audio/Plug-Ins/Components/Relief_EQ.component
 > ```  
 >  
 > tested by @jonasborneland [here](https://github.com/Kiriki-liszt/JS_Inflator_to_VST2_VST3/issues/12#issuecomment-1616671177)

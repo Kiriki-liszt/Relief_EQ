@@ -146,17 +146,6 @@ Since the magnitude changes gradually, starts early and ends late, it feels 'tra
 
 These choices in filter design and UI will guide a specific way of using an EQ, making the perception of 'they sound different'
 
-## Tech  
-
-It uses SVF State-Space archiecture for implementation of biquad filters.  
-It's better than Direct-Form implementaions in stability and error.  
-
-It runs in 64bit double precision processing, and 64bit I/O if host supports it.  
-It's to ensure there is no reason to blame sound quality of an EQ, and keep our focus in EQ decisions.  
-
-It oversamples to 96/88kHz at 48/44kHz sample rates, and does not at 96/88kHz and higher.  
-It's to keep both frequency and phase response of filters more natural and intuitive to our ears.  
-
 ## Ref  
 
 <https://dafx14.fau.de/papers/dafx14_aaron_wishnick_time_varying_filters_for_.pdf>  

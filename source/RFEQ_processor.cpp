@@ -285,8 +285,8 @@ tresult PLUGIN_API RFEQ_Processor::canProcessSampleSize (int32 symbolicSampleSiz
 		return kResultTrue;
 
 	// disable the following comment if your processing support kSample64
-	/* if (symbolicSampleSize == Vst::kSample64)
-		return kResultTrue; */
+	if (symbolicSampleSize == Vst::kSample64)
+		return kResultTrue;
 
 	return kResultFalse;
 }

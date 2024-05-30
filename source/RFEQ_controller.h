@@ -20,8 +20,8 @@ namespace VSTGUI {
 	class MyKnobText : public CTextEdit, protected CMouseWheelEditingSupport {
 	public:
 		
-		MyKnobText::MyKnobText(const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr txt, CBitmap* background = nullptr, const int32_t style = 0 );
-		MyKnobText::MyKnobText(const MyKnobText& v);
+		MyKnobText(const CRect& size, IControlListener* listener, int32_t tag, UTF8StringPtr txt, CBitmap* background = nullptr, const int32_t style = 0 );
+		MyKnobText(const MyKnobText& v);
 
 		virtual void  setMinPlain(float val)     { minPlain = val; }
 		virtual float getMinPlain() const        { return minPlain; }

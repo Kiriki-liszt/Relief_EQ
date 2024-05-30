@@ -9,7 +9,7 @@
 
 #include "public.sdk/source/main/pluginfactory.h"
 
-#define stringPluginName "TestEQ_01"
+#define stringPluginName "Relief EQ"
 
 using namespace Steinberg::Vst;
 using namespace yg331;

@@ -7,7 +7,68 @@
 #include "RFEQ_dataexchange.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
+#include <math.h>
+#include <queue>
+
 namespace yg331 {
+
+class Kaiser {
+public:
+
+#define maxTap 512
+
+    static inline double Ino(double x)
+    {
+        double d = 0, ds = 1, s = 1;
+        do
+        {
+            d += 2;
+            ds *= x * x / (d * d);
+            s += ds;
+        } while (ds > s * 1e-6);
+        return s;
+    };
+
+    static void calcFilter(double Fs, double Fa, double Fb, int M, double Att, double* dest)
+    {
+        // Kaiser windowed FIR filter "DIGITAL SIGNAL PROCESSING, II" IEEE Press pp 123-126.
+
+        int Np = (M - 1) / 2;
+        double A[maxTap] = { 0, };
+        double Alpha;
+        double Inoalpha;
+
+        A[0] = 2 * (Fb - Fa) / Fs;
+
+        for (int j = 1; j <= Np; j++)
+            A[j] = (sin(2.0 * j * M_PI * Fb / Fs) - sin(2.0 * j * M_PI * Fa / Fs)) / (j * M_PI);
+
+        if (Att < 21.0)
+            Alpha = 0;
+        else if (Att > 50.0)
+            Alpha = 0.1102 * (Att - 8.7);
+        else
+            Alpha = 0.5842 * pow((Att - 21), 0.4) + 0.07886 * (Att - 21);
+
+        Inoalpha = Ino(Alpha);
+
+        for (int j = 0; j <= Np; j++)
+        {
+            dest[Np + j] = A[j] * Ino(Alpha * std::sqrt(1.0 - ((double)(j * j) / (double)(Np * Np)))) / Inoalpha;
+        }
+        for (int j = 0; j < Np; j++)
+        {
+            dest[j] = dest[M - 1 - j];
+        }
+
+    };
+};
+
+// Buffers ------------------------------------------------------------------
+typedef struct _Flt {
+	double coef alignas(16)[maxTap] = { 0, };
+	double buff alignas(16)[maxTap] = { 0, };
+} Flt;
 
 //------------------------------------------------------------------------
 static constexpr Steinberg::Vst::DataExchangeBlock InvalidDataExchangeBlock = {
@@ -47,6 +108,9 @@ public:
 	/** Asks if a given sample size is supported see SymbolicSampleSizes. */
 	Steinberg::tresult PLUGIN_API canProcessSampleSize (Steinberg::int32 symbolicSampleSize) SMTG_OVERRIDE;
 
+	/** Gets the current Latency in samples. */
+	Steinberg::uint32 PLUGIN_API getLatencySamples() SMTG_OVERRIDE;
+
 	/** Here we go...the process call */
 	Steinberg::tresult PLUGIN_API process (Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
 		
@@ -67,6 +131,16 @@ public:
 //------------------------------------------------------------------------
 protected:
 
+	template <typename SampleType>
+	void processSVF
+	(
+		SampleType** inputs,
+		SampleType** outputs,
+		Steinberg::int32 numChannels,
+		Steinberg::Vst::SampleRate getSampleRate,
+		Steinberg::int32 sampleFrames
+	);
+
 	bool                       bBypass = false;
 	Steinberg::Vst::ParamValue fLevel  = 0.5;
 	Steinberg::Vst::ParamValue fOutput = 0.0;
@@ -84,6 +158,16 @@ protected:
 	SVF Band3[2];
 	SVF Band4[2];
 	SVF Band5[2];
+
+	Flt OS_filter_x2[2];
+	const int fir_size = 69;
+	const int tap_hm = (fir_size - 1) / 2;
+
+	void Fir_x2_dn(Steinberg::Vst::Sample64* in, Steinberg::Vst::Sample64* out, Steinberg::int32 channel);
+
+	const Steinberg::int32 latency_Fir_x2 = 17;
+
+	std::queue<double> latency_q[2];
 
 	void acquireNewExchangeBlock();
 

@@ -384,6 +384,226 @@ namespace VSTGUI {
 	};
 
 
+	EQCurveView::EQCurveView(
+		const CRect& size,
+		IControlListener* listener,
+		int32_t tag,
+		CBitmap* background
+	)
+		: CControl(size, listener, tag, background)
+	{
+		BackColor = kWhiteCColor;
+		LineColor = kBlackCColor;
+		BorderColor = kBlackCColor;
+		byPass = false;
+		setWantsIdle(true);
+	}
+	EQCurveView::EQCurveView(const EQCurveView& v)
+		: CControl(v)
+		, BackColor(v.BackColor)
+		, LineColor(v.LineColor)
+		, BorderColor(v.BorderColor)
+		, byPass(v.byPass)
+	{
+		setWantsIdle(true);
+	}
+
+#define SVF_set(Band, Array, SampleRate) \
+			Band.setSVF( \
+				Array[ParamArray_In],\
+				Array[ParamArray_Hz],\
+				Array[ParamArray_Q],\
+				Array[ParamArray_dB],\
+				Array[ParamArray_Type],\
+				Array[ParamArray_Order],\
+				SampleRate\
+			);
+
+	void EQCurveView::setBandArray(double* array, double Fs, bool _byPass, int num) {
+		switch (num)
+		{
+		case 1: SVF_set(Band1, array, Fs) break;
+		case 2: SVF_set(Band2, array, Fs) break;
+		case 3: SVF_set(Band3, array, Fs) break;
+		case 4: SVF_set(Band4, array, Fs) break;
+		case 5: SVF_set(Band5, array, Fs) break;
+		default:
+			break;
+		}
+		byPass = _byPass;
+	}
+
+	// overrides
+	void EQCurveView::draw(CDrawContext* pContext) {
+
+		pContext->setLineWidth(1);
+		pContext->setFillColor(getBackColor());
+		pContext->setFrameColor(getBorderColor());
+		pContext->drawRect(getViewSize(), VSTGUI::kDrawFilledAndStroked);
+
+		double MAX_FREQ = 22000.0;
+		double MIN_FREQ = 10.0;
+		double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
+		double DB_EQ_RANGE = 15.0;
+
+		auto border = getBorderColor();
+		border.setNormAlpha(0.5);
+
+		{
+			VSTGUI::CRect r(getViewSize());
+			pContext->setFrameColor(border);
+			for (int x = 2; x < 10; x++) {
+				VSTGUI::CCoord Hz_10 = r.getWidth() * log(10.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_10, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_10, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+			for (int x = 2; x < 10; x++) {
+				VSTGUI::CCoord Hz_100 = r.getWidth() * log(100.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_100, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_100, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+			for (int x = 2; x < 10; x++) {
+				VSTGUI::CCoord Hz_1000 = r.getWidth() * log(1000.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_1000, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_1000, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+
+			for (int x = 2; x < 3; x++) {
+				VSTGUI::CCoord Hz_10000 = r.getWidth() * log(10000.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_10000, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_10000, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+
+			pContext->setFrameColor(border);
+			{
+				VSTGUI::CCoord Hz_100 = r.getWidth() * log(100.0 / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_100, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_100, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord Hz_1000 = r.getWidth() * log(1000.0 / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_1000, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_1000, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord Hz_10000 = r.getWidth() * log(10000.0 / MIN_FREQ) / FREQ_LOG_MAX;
+				const VSTGUI::CPoint _p1(r.left + Hz_10000, r.bottom);
+				const VSTGUI::CPoint _p2(r.left + Hz_10000, r.top);
+				pContext->drawLine(_p1, _p2);
+			}
+		}
+
+		{
+			VSTGUI::CRect r(getViewSize());
+			pContext->setFrameColor(border);
+			{
+				VSTGUI::CCoord dB_p15 = r.getHeight() * (1.0 - (((-15.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p15);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p15);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_p10 = r.getHeight() * (1.0 - (((-10.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p10);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p10);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_p5 = r.getHeight() * (1.0 - (((-5.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p5);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p5);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_0 = r.getHeight() * (1.0 - (((.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_0);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_0);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_m5 = r.getHeight() * (1.0 - (((5.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m5);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m5);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_m10 = r.getHeight() * (1.0 - (((10.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m10);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m10);
+				pContext->drawLine(_p1, _p2);
+			}
+			{
+				VSTGUI::CCoord dB_m15 = r.getHeight() * (1.0 - (((15.0 / DB_EQ_RANGE) / 2) + 0.5));
+				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m15);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m15);
+				pContext->drawLine(_p1, _p2);
+			}
+		}
+
+
+		//VSTGUI::CCoord inset = 30;
+
+		VSTGUI::CGraphicsPath* path = pContext->createGraphicsPath();
+		if (path)
+		{
+			VSTGUI::CRect r(getViewSize());
+			//r.inset(inset, 0);
+
+			VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
+			path->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
+			for (int x = -1; x <= r.getWidth() + 1; x++) {
+				double tmp = MIN_FREQ * exp(FREQ_LOG_MAX * x / r.getWidth());
+				double freq = (std::max)((std::min)(tmp, MAX_FREQ), MIN_FREQ);
+
+				double dB_level = 0.0; // level;
+
+				double dB_1 = 20 * log10(Band1.mag_response(freq));
+				double dB_2 = 20 * log10(Band2.mag_response(freq));
+				double dB_3 = 20 * log10(Band3.mag_response(freq));
+				double dB_4 = 20 * log10(Band4.mag_response(freq));
+				double dB_5 = 20 * log10(Band5.mag_response(freq));
+				double dB = dB_level + dB_1 + dB_2 + dB_3 + dB_4 + dB_5;
+
+				double m = 1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5);
+				double scy = m * r.getHeight();
+
+				if (byPass) scy = 0.5 * r.getHeight();
+				path->addLine(VSTGUI::CPoint(r.left + x, r.top + scy));
+			}
+			path->addLine(VSTGUI::CPoint(r.right + 1, r.bottom + 1));
+			path->addLine(VSTGUI::CPoint(r.left - 1, r.bottom + 1));
+			path->closeSubpath();
+
+			pContext->setFrameColor(getLineColor());
+			pContext->setDrawMode(VSTGUI::kAntiAliasing);
+			pContext->setLineWidth(1.5);
+			pContext->setLineStyle(VSTGUI::kLineSolid);
+			pContext->drawGraphicsPath(path, VSTGUI::CDrawContext::kPathStroked);
+			path->forget();
+		}
+
+		setDirty(false);
+	};
+
+	bool EQCurveView::sizeToFit() {
+		if (getDrawBackground())
+		{
+			CRect vs(getViewSize());
+			vs.setWidth(getDrawBackground()->getWidth());
+			vs.setHeight(getDrawBackground()->getHeight());
+			setViewSize(vs);
+			setMouseableArea(vs);
+			return true;
+		}
+		return false;
+	};
+
 
 	static const std::string kAttrBackColor = "back-color";
 	static const std::string kAttrBorderColor = "border-color";
@@ -1158,47 +1378,11 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	{
 		auto dataBlock = toDataBlock(blocks[index]);
 
-		EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, 1);
-		EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, 2);
-		EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, 3);
-		EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, 4);
-		EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, 5);
-
-		/*
-		InMeter[0] = dataBlock->inL;
-		InMeter[1] = dataBlock->inR;
-		OutMeter[0] = dataBlock->outL;
-		OutMeter[1] = dataBlock->outR;
-		GRMeter = dataBlock->gR;
-		if (!vuMeterControllers.empty()) {
-			for (auto iter = vuMeterControllers.begin(); iter != vuMeterControllers.end(); iter++) {
-				(*iter)->setMeterValue(InMeter[0] * 0.5 + InMeter[1] * 0.5, kIn);
-				(*iter)->setMeterValue(OutMeter[0] * 0.5 + OutMeter[1] * 0.5, kOut);
-				(*iter)->setMeterValue(GRMeter, kGR);
-				(*iter)->setVuMeterValue(
-					InMeter[0], InMeter[1],
-					OutMeter[0], OutMeter[1],
-					GRMeter
-				);
-			}
-		}
-		*/
-		/*
-		FDebugPrint(
-			"Received Data Block: SampleRate: %d, SampleSize: %d, NumChannels: %d, NumSamples: %d\n",
-			dataBlock->sampleRate,
-			static_cast<uint32_t> (dataBlock->sampleSize),
-			static_cast<uint32_t> (dataBlock->numChannels),
-			static_cast<uint32_t> (dataBlock->numSamples));
-		
-		FDebugPrint(\
-			"Received Data Block: %f %f %f %f %f\n",\
-			dataBlock->inL,\
-			dataBlock->inR,\
-			dataBlock->outL,\
-			dataBlock->outR,\
-			dataBlock->gR);
-		*/
+		EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
+		EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
+		EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
+		EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
+		EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
 	}
 }
 

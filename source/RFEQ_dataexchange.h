@@ -15,19 +15,13 @@ namespace yg331 {
 	//------------------------------------------------------------------------
 	struct DataBlock
 	{
-		/*
-		uint32_t sampleRate;
-		uint16_t sampleSize;
-		uint16_t numChannels;
-		uint32_t numSamples;
-		float samples[0];
-		*/
 		ParamBand_Array Band1;
 		ParamBand_Array Band2;
 		ParamBand_Array Band3;
 		ParamBand_Array Band4;
 		ParamBand_Array Band5;
 		double Fs;
+		bool byPass;
 	};
 
 	//------------------------------------------------------------------------

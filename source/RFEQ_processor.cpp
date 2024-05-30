@@ -47,6 +47,11 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
 	/* If you don't need an event bus, you can remove the next line */
 	//addEventInput (STR16 ("Event In"), 1);
 
+	for (int ch = 0; ch < 2; ch++) {
+		Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_filter_x2[ch].coef);
+		for (int i = 0; i < fir_size; i++) OS_filter_x2[ch].coef[i] *= 2.0;
+	}
+
 	return kResultOk;
 }
 
@@ -70,7 +75,7 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
 				Vst::SpeakerArrangement arr;
 				getBusArrangement(Vst::BusDirections::kInput, 0, arr);
 				numChannels = static_cast<uint16_t> (Vst::SpeakerArr::getChannelCount(arr));
-				auto sampleSize = sizeof(float);
+				//auto sampleSize = sizeof(float);
 
 				config.blockSize = sizeof(DataBlock);
 				config.numBlocks = 2;
@@ -123,6 +128,7 @@ void RFEQ_Processor::acquireNewExchangeBlock()
 		memcpy(block->Band5, Clean, ParamArray::ParamArray_size * sizeof(double));
 
 		block->Fs = 0.0;
+		block->byPass = 0;
 	}
 }
 
@@ -200,9 +206,6 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		return kResultOk;
 	}
 
-	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-		acquireNewExchangeBlock();
-
 	// (simplification) we suppose in this example that we have the same input channel count than
 	// the output
 	// int32 numChannels = data.inputs[0].numChannels;
@@ -213,19 +216,6 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 	void** in  = getChannelBuffersPointer(processSetup, data.inputs[0]);
 	void** out = getChannelBuffersPointer(processSetup, data.outputs[0]);
 	Vst::SampleRate getSampleRate = processSetup.sampleRate;
-
-	//--- send data ----------------
-	if (auto block = toDataBlock(currentExchangeBlock))
-	{
-		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
-		block->Fs = getSampleRate;
-		dataExchange->sendCurrentBlock();
-		acquireNewExchangeBlock();
-	}
 
 	//---check if silence---------------
 	// check if all channel are silent then process silent
@@ -249,52 +239,41 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 	else {
 
 		data.outputs[0].silenceFlags = data.inputs[0].silenceFlags;
-		
-#define SVF_set_func(Band, Array, channel) \
-	Band[channel].setSVF( \
-		Array[ParamArray_In],\
-		Array[ParamArray_Hz],\
-		Array[ParamArray_Q],\
-		Array[ParamArray_dB],\
-		Array[ParamArray_Type],\
-		Array[ParamArray_Order],\
-		getSampleRate\
-	);
-
-		for (int ch = 0; ch < numChannels; ch++) {
-			SVF_set_func(Band1, fParamBand1_Array, ch)
-			SVF_set_func(Band2, fParamBand2_Array, ch)
-			SVF_set_func(Band3, fParamBand3_Array, ch)
-			SVF_set_func(Band4, fParamBand4_Array, ch)
-			SVF_set_func(Band5, fParamBand5_Array, ch)
-
-			Vst::Sample32* ptrIn = (Vst::Sample32*)in[ch];
-			Vst::Sample32* ptrOut = (Vst::Sample32*)out[ch];
-			int32 samples = data.numSamples;
-			while (--samples >= 0)
-			{
-				Vst::Sample64 inputSample = *ptrIn;
-				double v1 = Band1[ch].computeSVF(inputSample);
-				double v2 = Band2[ch].computeSVF(v1);
-				double v3 = Band3[ch].computeSVF(v2);
-				double v4 = Band4[ch].computeSVF(v3);
-				double v5 = Band5[ch].computeSVF(v4);
-				if (bBypass == 1) v5 = inputSample;
-				*ptrOut = (Vst::Sample32)v5;
-
-				ptrIn++;
-				ptrOut++;
-			}
+	
+		if (data.symbolicSampleSize == Vst::kSample32) {
+			processSVF<Vst::Sample32>((Vst::Sample32**)in, (Vst::Sample32**)out, numChannels, getSampleRate, data.numSamples);
 		}
+		else {
+			processSVF<Vst::Sample64>((Vst::Sample64**)in, (Vst::Sample64**)out, numChannels, getSampleRate, data.numSamples);
+		}
+		
 		
 	}
 	return kResultOk;
 }
 
 //------------------------------------------------------------------------
+uint32 PLUGIN_API RFEQ_Processor::getLatencySamples()
+{
+	if (fParamOS == overSample_2x) return latency_Fir_x2;
+	return 0;
+}
+
+//------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 {
 	//--- called before any processing ----
+
+	Vst::ParamValue OS_target = 0.0;
+	if (newSetup.sampleRate <= 48000.0) {
+		fParamOS = overSample_2x;
+		OS_target = 2 * newSetup.sampleRate;
+	}
+	else {
+		fParamOS = overSample_1x;
+		OS_target = newSetup.sampleRate;
+	}
+
 	return AudioEffect::setupProcessing (newSetup);
 }
 
@@ -345,18 +324,19 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
 	fLevel  = savedLevel;
 	fOutput = savedOutput;
 
-	std::memcpy(fParamBand1_Array, savedBand1_Array, sizeof(ParamBand_Array));
-	std::memcpy(fParamBand2_Array, savedBand2_Array, sizeof(ParamBand_Array));
-	std::memcpy(fParamBand3_Array, savedBand3_Array, sizeof(ParamBand_Array));
-	std::memcpy(fParamBand4_Array, savedBand4_Array, sizeof(ParamBand_Array));
-	std::memcpy(fParamBand5_Array, savedBand5_Array, sizeof(ParamBand_Array));
+#define Arrcpy(dst, src) \
+	dst[ParamArray_In]    = src[ParamArray_In];   \
+	dst[ParamArray_Hz]    = src[ParamArray_Hz];   \
+	dst[ParamArray_Q]     = src[ParamArray_Q];    \
+	dst[ParamArray_dB]    = src[ParamArray_dB];   \
+	dst[ParamArray_Type]  = src[ParamArray_Type]; \
+	dst[ParamArray_Order] = src[ParamArray_Order]; 
 
-
-	Band1[1].copySVF(&Band1[0]);
-	Band2[1].copySVF(&Band2[0]);
-	Band3[1].copySVF(&Band3[0]);
-	Band4[1].copySVF(&Band4[0]);
-	Band5[1].copySVF(&Band5[0]);
+	Arrcpy(fParamBand1_Array, savedBand1_Array)
+	Arrcpy(fParamBand2_Array, savedBand2_Array)
+	Arrcpy(fParamBand3_Array, savedBand3_Array)
+	Arrcpy(fParamBand4_Array, savedBand4_Array)
+	Arrcpy(fParamBand5_Array, savedBand5_Array)
 
 	if (Vst::Helpers::isProjectState(state) == kResultTrue)
 	{
@@ -400,6 +380,154 @@ tresult PLUGIN_API RFEQ_Processor::getState (IBStream* state)
 	streamer.writeDoubleArray(fParamBand5_Array, ParamArray_size);
 
 	return kResultOk;
+}
+
+
+
+template <typename SampleType>
+void RFEQ_Processor::processSVF(
+	SampleType** inputs,
+	SampleType** outputs,
+	Steinberg::int32 numChannels,
+	Steinberg::Vst::SampleRate getSampleRate,
+	Steinberg::int32 sampleFrames)
+{
+
+	Vst::Sample64 _db = (24.0 * fLevel - 12.0);
+	Vst::Sample64 In_Atten = exp(log(10.0) * _db / 20.0);
+
+	Vst::SampleRate currFs = getSampleRate;
+	if (fParamOS == overSample_2x) currFs = getSampleRate * 2.0;
+
+	int32 oversampling = 1;
+	if (fParamOS == overSample_2x) oversampling = 2;
+
+	int32 latency = 0;
+	if (fParamOS == overSample_2x) latency = latency_Fir_x2;
+
+	//--- send data ----------------
+	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+		acquireNewExchangeBlock();
+	if (auto block = toDataBlock(currentExchangeBlock))
+	{
+		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+		block->Fs = currFs;
+		block->byPass = bBypass;
+		dataExchange->sendCurrentBlock();
+		acquireNewExchangeBlock();
+	}
+
+
+#define SVF_set_func(Band, Array, channel) \
+	Band[channel].setSVF( \
+		Array[ParamArray_In],\
+		Array[ParamArray_Hz],\
+		Array[ParamArray_Q],\
+		Array[ParamArray_dB],\
+		Array[ParamArray_Type],\
+		Array[ParamArray_Order],\
+		currFs\
+	);
+
+	for (int32 channel = 0; channel < numChannels; channel++)
+	{
+		SVF_set_func(Band1, fParamBand1_Array, channel)
+		SVF_set_func(Band2, fParamBand2_Array, channel)
+		SVF_set_func(Band3, fParamBand3_Array, channel)
+		SVF_set_func(Band4, fParamBand4_Array, channel)
+		SVF_set_func(Band5, fParamBand5_Array, channel)
+
+		int32 samples = sampleFrames;
+
+		SampleType* ptrIn = (SampleType*)inputs[channel];
+		SampleType* ptrOut = (SampleType*)outputs[channel];
+
+		if (latency != latency_q[channel].size()) {
+			int32 diff = latency - (int32)latency_q[channel].size();
+			if (diff > 0) for (int i = 0; i <  diff; i++) latency_q[channel].push(0.0);
+			else          for (int i = 0; i < -diff; i++) latency_q[channel].pop();
+		}
+
+		while (--samples >= 0)
+		{
+			Vst::Sample64 inputSample = *ptrIn; ptrIn++;
+			Vst::Sample64 drySample = inputSample;
+			inputSample *= In_Atten;
+
+			double up_x[4] = { 0.0, };
+			double up_y[4] = { 0.0, };
+
+			up_x[0] = inputSample;
+
+			// Process
+			for (int i = 0; i < oversampling; i++)
+			{
+				Vst::Sample64 overSampled = up_x[i];
+
+				double v1 = Band1[channel].computeSVF(overSampled);
+				double v2 = Band2[channel].computeSVF(v1);
+				double v3 = Band3[channel].computeSVF(v2);
+				double v4 = Band4[channel].computeSVF(v3);
+				double v5 = Band5[channel].computeSVF(v4);
+
+				up_y[i] = v5; // * gain;
+			}
+
+			// Downsampling
+			if (fParamOS == overSample_1x) inputSample = up_y[0];
+			else if (fParamOS == overSample_2x) Fir_x2_dn(up_y, &inputSample, channel);
+
+			// Latency compensate
+			Vst::Sample64 delayed;
+			if (fParamOS == overSample_1x) {
+				delayed = drySample;
+			}
+			else {
+				delayed = latency_q[channel].front();
+				latency_q[channel].pop();
+				latency_q[channel].push(drySample);
+			}
+
+			if (bBypass) {
+				inputSample = delayed;
+			}
+
+			*ptrOut = (SampleType)inputSample;
+
+			ptrOut++;
+		}
+	}
+	return;
+}
+
+void RFEQ_Processor::Fir_x2_dn(
+	Vst::Sample64* in,
+	Vst::Sample64* out,
+	Steinberg::int32 channel
+)
+{
+	
+	// OS - downsample
+	memmove(OS_filter_x2[channel].buff + 1, OS_filter_x2[channel].buff, sizeof(double) * (fir_size - 1));
+	OS_filter_x2[channel].buff[0] = in[0];
+	
+	double acc = 0.0;
+
+	for (int i = 0; i < tap_hm; i++) {
+		double a = OS_filter_x2[channel].buff[i];
+		double b = OS_filter_x2[channel].buff[fir_size - 1 - i];
+		acc += OS_filter_x2[channel].coef[i] * (a + b);
+	}   
+	acc += OS_filter_x2[channel].coef[tap_hm] * OS_filter_x2[channel].buff[tap_hm];
+
+	memmove(OS_filter_x2[channel].buff + 1, OS_filter_x2[channel].buff, sizeof(double) * (fir_size - 1));
+	OS_filter_x2[channel].buff[0] = in[1];
+
+	*out = acc;
 }
 
 //------------------------------------------------------------------------

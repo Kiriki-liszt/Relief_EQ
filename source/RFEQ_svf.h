@@ -243,8 +243,8 @@ public:
 		double kdA = bk / A;
 		double kmA = bk * A;
 		double smA = s * A;
-		double gdA = filter->g / A;
-		double gmA = filter->g * A;
+		//double gdA = filter->g / A;
+		//double gmA = filter->g * A;
 		double gdSA = filter->g / sqrt(A);
 		double gmSA = filter->g * sqrt(A);
 		double AmA = A * A;
@@ -254,8 +254,8 @@ public:
 		case kLowPass:      filter->m0 = 0;   filter->m1 = 0;   filter->m2 = 1;   break;
 		case kHighPass:     filter->m0 = 1;   filter->m1 = 0;   filter->m2 = 0;   break;
 		case kBell:         filter->m0 = 1;   filter->m1 = kmA; filter->m2 = 1;   filter->g = filter->g; filter->k = kdA;   break;
-		case kLowShelf:     filter->m0 = 1;   filter->m1 = 0;   filter->m2 = AmA; filter->g = gdA;       filter->k = 1 - filter->g; break;
-		case kHighShelf:    filter->m0 = AmA; filter->m1 = 0;   filter->m2 = 1;   filter->g = gmA;       filter->k = 1 - filter->g; break;
+		case kLowShelf:     filter->m0 = 1;   filter->m1 = 0;   filter->m2 = AmA; filter->g = filter->g; filter->k = 1 - filter->g; break;
+		case kHighShelf:    filter->m0 = AmA; filter->m1 = 0;   filter->m2 = 1;   filter->g = filter->g; filter->k = 1 - filter->g; break;
 		case kLowShelfHiQ:  filter->m0 = 1;   filter->m1 = smA; filter->m2 = AmA; filter->g = gdSA;      filter->k = s;     break;
 		case kHighShelfHiQ: filter->m0 = AmA; filter->m1 = smA; filter->m2 = 1;   filter->g = gmSA;      filter->k = s;     break;
 		default: break;

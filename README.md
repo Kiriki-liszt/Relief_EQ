@@ -7,6 +7,14 @@ At 44.1 kHz and 48 kHz sampling rates, it upsamples to 88.2 kHz or 96 kHz respec
 
 Windows and Mac, VST3 and AU.  
 
+## Windows  
+
+- x64  
+
+## macOS  
+
+- 10.13(High Sierra) to 14.5(Sonoma)  
+
 <img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
 
 ## How to use  
@@ -49,6 +57,7 @@ VSTGUI 4.12 used
 ## Version logs
 
 v1.0.0.b : intial try.  
+v1.0.0 : Official release.  Changed shelf arch.  
 
 ## How it started
 

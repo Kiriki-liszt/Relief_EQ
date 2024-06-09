@@ -137,9 +137,9 @@ They look at values what plugins show and listens how it sounds while turning kn
 Then, shouldn't we focus on 'what values are showing' and 'what happens when we turn knobs?'  
 
 Let's look at Gain - Q dependency first.  
-I means turning gain knob affects Q value internally.  
+It means turning gain knob affects Q value internally.  
 EQ with minimal Gain - Q dependency will remain relativly high Q in low gains, feeling clinical.  
-EQ with moderate Gain - Q dependency will have borad Q in low gains, feeling musical.  
+EQ with moderate Gain - Q dependency will have broad Q in low gains, feeling musical.  
 They will sound exactly same if we match gain and Q in Plugin Doctor!
 However, any engineer using these two EQs will say that they sound different, because the difference in Gain - Q dependency made them use EQ diffently!!  
 
@@ -150,7 +150,7 @@ This is commonly missed point in digital EQs.
 They make shelves in 12dB/oct and frequency centered at mid point, because this is how RBJ style shelves are defined.  
 So, what happens here?
 6dB/oct filters are more shallow and much wider than 12dB/oct.  
-Also, at same displyed frequency, -3dB point shelf makes much lower shelf then -6dB or mid point shelf.  
+Also, at same displayed frequency, -3dB point shelf makes much lower shelf then -6dB or mid point shelf.  
 Since the magnitude changes gradually, starts early and ends late, it feels 'transparant' and 'smooth'.  
 
 These choices in filter design and UI will guide a specific way of using an EQ, making the perception of 'they sound different'

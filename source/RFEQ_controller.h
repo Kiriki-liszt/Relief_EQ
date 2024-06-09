@@ -5,6 +5,7 @@
 #pragma once
 
 #include "RFEQ_svf.h"
+#include "RFEQ_fft.h"
 #include "RFEQ_dataexchange.h"
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
@@ -96,6 +97,8 @@ namespace VSTGUI {
 		EQCurveView(const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background );
 		EQCurveView(const EQCurveView& v);
 
+		void setFracOct();
+		void setFFTArray(float* array, double sampleRate);
 		void setBandArray(double* array, double Fs, bool _byPass, int num);
 
 		// get/set Attributes
@@ -107,6 +110,12 @@ namespace VSTGUI {
 
 		virtual void setLineColor(CColor color) { if (LineColor != color) { LineColor = color; setDirty(true); } }
 		CColor getLineColor() const { return LineColor; }
+
+		virtual void setFFTLineColor(CColor color) { if (FFTLineColor != color) { FFTLineColor = color; setDirty(true); } }
+		CColor getFFTLineColor() const { return FFTLineColor; }
+
+		virtual void setFFTFillColor(CColor color) { if (FFTFillColor != color) { FFTFillColor = color; setDirty(true); } }
+		CColor getFFTFillColor() const { return FFTFillColor; }
 
 		// overrides
 		void setDirty(bool state) override { CView::setDirty(state); };
@@ -131,6 +140,8 @@ namespace VSTGUI {
 		CColor		BackColor;
 		CColor		LineColor;
 		CColor		BorderColor;
+		CColor		FFTLineColor;
+		CColor		FFTFillColor;
 
 		SVF Band1;
 		SVF Band2;
@@ -138,7 +149,24 @@ namespace VSTGUI {
 		SVF Band4;
 		SVF Band5;
 
+		double filterSamplerate = 96000.0;
 		bool byPass;
+
+		static constexpr int fftOrder = yg331::_fftOrder;
+		static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
+		static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
+
+		float fft_linear[numBins] = { 0.0 };
+		float fft_RMS[numBins] = { 0.0 };
+		float fft_freq[numBins] = { 0.0 };
+
+		// 11 octs, 12 per oct = 132 bands max.
+#define MAX_BANDS 132
+#define INTERVAL 12
+		float bandsCenter[MAX_BANDS] = { 0.0, };
+		float bandsLower[MAX_BANDS] = { 0.0, };
+		float bandsUpper[MAX_BANDS] = { 0.0, };
+		float bandsOutput[MAX_BANDS] = { 0.0, };
 	};
 }
 

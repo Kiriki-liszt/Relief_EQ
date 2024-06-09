@@ -395,6 +395,8 @@ namespace VSTGUI {
 		BackColor = kWhiteCColor;
 		LineColor = kBlackCColor;
 		BorderColor = kBlackCColor;
+		FFTLineColor = kBlackCColor;
+		FFTFillColor = kBlackCColor;
 		byPass = false;
 		setWantsIdle(true);
 	}
@@ -403,6 +405,8 @@ namespace VSTGUI {
 		, BackColor(v.BackColor)
 		, LineColor(v.LineColor)
 		, BorderColor(v.BorderColor)
+		, FFTLineColor(v.FFTLineColor)
+		, FFTFillColor(v.FFTFillColor)
 		, byPass(v.byPass)
 	{
 		setWantsIdle(true);
@@ -430,8 +434,139 @@ namespace VSTGUI {
 		default:
 			break;
 		}
+		filterSamplerate = Fs;
 		byPass = _byPass;
 	}
+
+	void EQCurveView::setFracOct() {
+		bandsCenter[0] = 20.0;
+		bandsLower[0] = bandsCenter[0] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
+		bandsUpper[0] = bandsCenter[0] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
+
+		for (int band = 1; band < MAX_BANDS; band++) {
+			bandsCenter[band] = bandsCenter[band - 1] * std::pow(10.0, (3.0 / (10.0 * INTERVAL)));
+			bandsLower[band] = bandsCenter[band] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
+			bandsUpper[band] = bandsCenter[band] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
+		}
+	}
+
+
+#define cubic_hermite(A, B, C, D, t) \
+		(/*a0*/(D - C - A + B) * t * t * t + /*a1*/(A - B - D + C + A - B) * t * t + /*a2*/(C - A) * t + /*a3*/(B) )
+
+#define lanczos(x, a) \
+		(a * sin(M_PI * (double)x) * sin(M_PI * (double)x / a) / (M_PI * M_PI * (double)x * (double)x))
+
+#define lanczos_kernel(x, a) \
+		((x == 0) ? ( 1.0 ) : ((-a < x) && (x < a) ? (lanczos(x, a)) : (0.0)))
+
+#define lanczos_interpolation(A, B, C, D, t) \
+		(A * lanczos_kernel((t + 1.0), 2) + B * lanczos_kernel(t, 2) + C * lanczos_kernel((t - 1.0), 2) + D * lanczos_kernel((t - 2.0), 2))
+
+#define lanczos_interpolation_6(Z, A, B, C, D, E, t) \
+		(Z * lanczos_kernel((t + 2.0), 3) + (A * lanczos_kernel((t + 1.0), 3) + B * lanczos_kernel(t, 3) + C * lanczos_kernel((t - 1.0), 3) + D * lanczos_kernel((t - 2.0), 3))  + E * lanczos_kernel((t - 3.0), 3))
+
+#define safe_bin(bin, x)   std::max(std::min((int)bin  + (int)x, (int)numBins   - 1) , 0)
+#define safe_band(band, x) std::max(std::min((int)band + (int)x, (int)MAX_BANDS - 1) , 0)
+
+	void EQCurveView::setFFTArray(float* array, double sampleRate)
+	{
+		// Unit frequency per bin, with sample rate
+		double freqBin_width = sampleRate / fftSize;
+		double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
+		double icoef = 1.0 - coeff;
+
+		for (int i = 0; i < numBins; ++i) {
+			fft_RMS[i] = (fft_RMS[i] * coeff) + (icoef * array[i] * array[i]);
+
+			fft_linear[i] = std::sqrt(fft_RMS[i]);
+
+			fft_freq[i] = (i + 0.5) * freqBin_width;
+		}
+		// fft_linear[0] = 0.0;
+		//for (int i = 1; i < 10; i++) FDebugPrint("%f ", fft_linear[i]);
+		//FDebugPrint("\n");
+
+		memset(bandsOutput, 0, sizeof(bandsOutput));
+
+
+		if (false) {
+			for (int band = 0, lower = 0, upper = 0; band < MAX_BANDS; band++)
+			{
+				double center = bandsCenter[band];
+
+				while ((center >= fft_freq[upper]) && (upper < numBins - 1)) {
+					upper++;
+				}
+				while ((fft_freq[lower + 1] <= center) && (lower + 1 < numBins - 1)) {
+					lower++;
+				}
+				// printf("lower = %d : %f | center = %d : %f | upper = %d : %f \n", lower, fft_freq[lower], band, center, upper, fft_freq[upper]);
+
+				// interpolate
+				float A = fft_linear[safe_bin(lower, -1)];
+				float B = fft_linear[safe_bin(lower, 0)];
+				float C = fft_linear[safe_bin(upper, 0)];
+				float D = fft_linear[safe_bin(upper, 1)];
+				float t = (bandsCenter[band] - fft_freq[lower]) / (fft_freq[upper] - fft_freq[lower]);
+				bandsOutput[band] = lanczos_interpolation(A, B, C, D, t);
+				// printf("Band center freq = %f, interpolated = %f\n", bandsCenter[band], bandsOutput[band]);
+
+			}
+		}
+
+		if (false) {
+			int bin = 1, band = 0;
+			int cnt = 0;
+			while ((bin < numBins) && (band < MAX_BANDS)) {
+
+				// 1 band, n bins
+				// Inside of band range
+				if ((bandsLower[band] <= fft_freq[bin]) && (fft_freq[bin] < bandsUpper[band]))
+				{
+					// add
+					bandsOutput[band] += fft_linear[(bin)];
+					cnt++;
+
+					// and if next bin is not in range
+					if ((bandsUpper[band] <= fft_freq[bin + 1]) || ((bin + 1 > numBins - 1) || (band > MAX_BANDS - 1)))
+					{
+						// then calc now
+						bandsOutput[band] /= cnt;
+
+						cnt = 0;
+						//bin++;
+						band++;
+					}
+
+					bin++;
+
+					continue;
+				}
+
+
+
+				// 1 bin, n bands
+				if ((fft_freq[safe_bin(bin, -1)] <= bandsLower[band]) && (bandsUpper[band] < fft_freq[safe_bin(bin, 1)]))
+				{
+					// interpolate
+					float A = fft_linear[safe_bin(bin, -2)];
+					float B = fft_linear[safe_bin(bin, -1)];
+					float C = fft_linear[safe_bin(bin, 0)];
+					float D = fft_linear[safe_bin(bin, 1)];
+					float t = (bandsCenter[band] - fft_freq[bin]) / (fft_freq[bin] - fft_freq[safe_bin(bin, 1)]);
+					bandsOutput[band] = lanczos_interpolation(D, C, B, A, t);
+					if (bandsOutput[band] < 0.0) bandsOutput[band] = 0.0;
+					band++;
+					continue;
+				}
+
+				bin++;
+			}
+		}
+
+	}
+
 
 	// overrides
 	void EQCurveView::draw(CDrawContext* pContext) {
@@ -442,9 +577,43 @@ namespace VSTGUI {
 		pContext->drawRect(getViewSize(), VSTGUI::kDrawFilledAndStroked);
 
 		double MAX_FREQ = 22000.0;
-		double MIN_FREQ = 10.0;
+		double MIN_FREQ = 20.0;
 		double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
+		double ceiling = 0.0;
+		double noise_floor = -60.0;
 		double DB_EQ_RANGE = 15.0;
+
+
+// Given frequency, return screen x position
+#define freq_to_x(view, freq) \
+	(view.getWidth() * log(freq / MIN_FREQ) / FREQ_LOG_MAX)
+
+// Given screen x position, return frequency
+#define x_to_freq(view, x) \
+	std::max(std::min(MIN_FREQ * exp(FREQ_LOG_MAX * x / view.getWidth()), MAX_FREQ), MIN_FREQ)
+
+// Given a magnitude, return y screen position as 0..1 with applied tilt
+#define mag_to_01(m, freq) \
+	1.0 - (( (20 * log10(m)) - ceiling) / (noise_floor - ceiling));
+
+// Given a magnitude (1.0 .... very small number), return y screen position
+#define mag_to_y(view, m) \
+	((((20.0 * log10(m)) - ceiling) / (noise_floor - ceiling)) * (view.getHeight()))
+
+// Given decibels, return screen y position
+#define db_to_y(view, db) \
+	(((db - ceiling) / (noise_floor - ceiling)) * view.getHeight())
+
+// Given screen y position, return decibels
+#define y_to_db(view, y) \
+	ceiling + ((y / view.getHeight()) * (noise_floor - ceiling));
+
+#define dB_to_y_EQ(view, dB) \
+		view.getHeight() * (1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5));
+
+
+
+		
 
 		auto border = getBorderColor();
 		border.setNormAlpha(0.5);
@@ -453,46 +622,26 @@ namespace VSTGUI {
 			VSTGUI::CRect r(getViewSize());
 			pContext->setFrameColor(border);
 			for (int x = 2; x < 10; x++) {
-				VSTGUI::CCoord Hz_10 = r.getWidth() * log(10.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+				VSTGUI::CCoord Hz_10 = freq_to_x(r, 10.0 * x);
 				const VSTGUI::CPoint _p1(r.left + Hz_10, r.bottom);
 				const VSTGUI::CPoint _p2(r.left + Hz_10, r.top);
 				pContext->drawLine(_p1, _p2);
 			}
-			for (int x = 2; x < 10; x++) {
-				VSTGUI::CCoord Hz_100 = r.getWidth() * log(100.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+			for (int x = 1; x < 10; x++) {
+				VSTGUI::CCoord Hz_100 = freq_to_x(r, 100.0 * x);
 				const VSTGUI::CPoint _p1(r.left + Hz_100, r.bottom);
 				const VSTGUI::CPoint _p2(r.left + Hz_100, r.top);
 				pContext->drawLine(_p1, _p2);
 			}
-			for (int x = 2; x < 10; x++) {
-				VSTGUI::CCoord Hz_1000 = r.getWidth() * log(1000.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
+			for (int x = 1; x < 10; x++) {
+				VSTGUI::CCoord Hz_1000 = freq_to_x(r, 1000.0 * x);
 				const VSTGUI::CPoint _p1(r.left + Hz_1000, r.bottom);
 				const VSTGUI::CPoint _p2(r.left + Hz_1000, r.top);
 				pContext->drawLine(_p1, _p2);
 			}
 
-			for (int x = 2; x < 3; x++) {
-				VSTGUI::CCoord Hz_10000 = r.getWidth() * log(10000.0 * x / MIN_FREQ) / FREQ_LOG_MAX;
-				const VSTGUI::CPoint _p1(r.left + Hz_10000, r.bottom);
-				const VSTGUI::CPoint _p2(r.left + Hz_10000, r.top);
-				pContext->drawLine(_p1, _p2);
-			}
-
-			pContext->setFrameColor(border);
-			{
-				VSTGUI::CCoord Hz_100 = r.getWidth() * log(100.0 / MIN_FREQ) / FREQ_LOG_MAX;
-				const VSTGUI::CPoint _p1(r.left + Hz_100, r.bottom);
-				const VSTGUI::CPoint _p2(r.left + Hz_100, r.top);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord Hz_1000 = r.getWidth() * log(1000.0 / MIN_FREQ) / FREQ_LOG_MAX;
-				const VSTGUI::CPoint _p1(r.left + Hz_1000, r.bottom);
-				const VSTGUI::CPoint _p2(r.left + Hz_1000, r.top);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord Hz_10000 = r.getWidth() * log(10000.0 / MIN_FREQ) / FREQ_LOG_MAX;
+			for (int x = 1; x < 3; x++) {
+				VSTGUI::CCoord Hz_10000 = freq_to_x(r, 10000.0 * x);
 				const VSTGUI::CPoint _p1(r.left + Hz_10000, r.bottom);
 				const VSTGUI::CPoint _p2(r.left + Hz_10000, r.top);
 				pContext->drawLine(_p1, _p2);
@@ -502,62 +651,119 @@ namespace VSTGUI {
 		{
 			VSTGUI::CRect r(getViewSize());
 			pContext->setFrameColor(border);
+
+			for (int cnt = -(int)DB_EQ_RANGE; cnt < (int)DB_EQ_RANGE; cnt += 5) 
 			{
-				VSTGUI::CCoord dB_p15 = r.getHeight() * (1.0 - (((-15.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p15);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p15);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_p10 = r.getHeight() * (1.0 - (((-10.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p10);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p10);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_p5 = r.getHeight() * (1.0 - (((-5.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_p5);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_p5);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_0 = r.getHeight() * (1.0 - (((.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_0);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_0);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_m5 = r.getHeight() * (1.0 - (((5.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m5);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m5);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_m10 = r.getHeight() * (1.0 - (((10.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m10);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m10);
-				pContext->drawLine(_p1, _p2);
-			}
-			{
-				VSTGUI::CCoord dB_m15 = r.getHeight() * (1.0 - (((15.0 / DB_EQ_RANGE) / 2) + 0.5));
-				const VSTGUI::CPoint _p1(r.left, r.bottom - dB_m15);
-				const VSTGUI::CPoint _p2(r.right, r.bottom - dB_m15);
+				VSTGUI::CCoord dB = dB_to_y_EQ(r, cnt);
+				const VSTGUI::CPoint _p1(r.left,  r.bottom - dB);
+				const VSTGUI::CPoint _p2(r.right, r.bottom - dB);
 				pContext->drawLine(_p1, _p2);
 			}
 		}
 
 
-		//VSTGUI::CCoord inset = 30;
-
-		VSTGUI::CGraphicsPath* path = pContext->createGraphicsPath();
-		if (path)
+		VSTGUI::CGraphicsPath* FFT_curve = pContext->createGraphicsPath();
+		if (FFT_curve)
 		{
 			VSTGUI::CRect r(getViewSize());
-			//r.inset(inset, 0);
 
 			VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
-			path->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
-			for (int x = -1; x <= r.getWidth() + 1; x++) {
+			//path->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
+
+			double y = mag_to_01(bandsOutput[0]);
+			y = (std::max)((std::min)(y, 1.0), 0.0);
+			y *= r.getHeight();
+			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y));
+
+			// RAW
+			for (int bin = 0; bin < numBins; ++bin) {
+				double x = freq_to_x(r, fft_freq[bin]);
+				x = (std::max)((std::min)(x, r.getWidth()), 0.0);
+				double y = mag_to_01(fft_linear[bin]);
+				y = (std::max)((std::min)(y, 1.0), 0.0);
+				y *= r.getHeight();
+
+				FFT_curve->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
+			}
+
+			/*
+			// 1/12 oct, as is
+			for (int band = 0; band < MAX_BANDS; band++) {
+				double x = freq_to_x(r, bandsCenter[band]);
+				x = (std::max)((std::min)(x, r.getWidth()), 0.0);
+				double y = mag_to_01(bandsOutput[band]);
+				y = (std::max)((std::min)(y, 1.0), 0.0);
+				y *= r.getHeight();
+
+				path->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
+			}
+			*/
+
+			/*
+			// 1/12, interpolated after
+			for (int band = 0; band < MAX_BANDS; band++) {
+				float xA = bandsCenter[safe_band(band, -1)];
+				float xB = bandsCenter[safe_band(band, 0)];
+				float xC = bandsCenter[safe_band(band, +1)];
+				float xD = bandsCenter[safe_band(band, +2)];
+
+				float yA = bandsOutput[safe_band(band, -1)];
+				float yB = bandsOutput[safe_band(band, 0)];
+				float yC = bandsOutput[safe_band(band, +1)];
+				float yD = bandsOutput[safe_band(band, +2)];
+
+				static constexpr int resolution = 5;
+				for (int i = 0; i < resolution; i++) {
+					double t = (double)i / resolution;
+					//double dx = lanczos_interpolation(xA, xB, xC, xD, t);
+					double dx = cubic_hermite(xA, xB, xC, xD, t);
+
+					//double dy = lanczos_interpolation(yA, yB, yC, yD, t);
+					double dy = cubic_hermite(yA, yB, yC, yD, t);
+					dy = (std::max)(dy, 0.0);
+					double x = freq_to_x(r, dx);
+					x = (std::max)((std::min)(x, r.getWidth()), 0.0);
+					double y = mag_to_01(dy);
+					y = (std::max)((std::min)(y, 1.0), 0.0);
+					y *= r.getHeight();
+
+					path->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
+				}
+			}
+			*/
+
+			FFT_curve->addLine(VSTGUI::CPoint(r.right + 1, r.bottom + 1));
+			FFT_curve->addLine(VSTGUI::CPoint(r.left - 1, r.bottom + 1));
+			FFT_curve->closeSubpath();
+
+
+			VSTGUI::CColor ff = getFFTFillColor();
+			ff.setNormAlpha(0.8);
+			pContext->setFrameColor(VSTGUI::kTransparentCColor);
+			pContext->setFillColor(ff);
+			pContext->setDrawMode(VSTGUI::kAntiAliasing);
+			pContext->setLineWidth(0.0);
+			pContext->setLineStyle(VSTGUI::kLineSolid);
+			pContext->drawGraphicsPath(FFT_curve, VSTGUI::CDrawContext::kPathFilled);
+
+
+			pContext->setFrameColor(getFFTLineColor());
+			pContext->setDrawMode(VSTGUI::kAntiAliasing);
+			pContext->setLineWidth(1.0);
+			pContext->setLineStyle(VSTGUI::kLineSolid);
+			pContext->drawGraphicsPath(FFT_curve, VSTGUI::CDrawContext::kPathStroked);
+
+			FFT_curve->forget();
+		}
+
+		VSTGUI::CGraphicsPath* EQ_curve = pContext->createGraphicsPath();
+		if (EQ_curve)
+		{
+			VSTGUI::CRect r(getViewSize());
+
+			VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
+			EQ_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
+			for (double x = -1; x <= r.getWidth() + 1; x+=0.1) {
 				double tmp = MIN_FREQ * exp(FREQ_LOG_MAX * x / r.getWidth());
 				double freq = (std::max)((std::min)(tmp, MAX_FREQ), MIN_FREQ);
 
@@ -574,19 +780,24 @@ namespace VSTGUI {
 				double scy = m * r.getHeight();
 
 				if (byPass) scy = 0.5 * r.getHeight();
-				path->addLine(VSTGUI::CPoint(r.left + x, r.top + scy));
+				EQ_curve->addLine(VSTGUI::CPoint(r.left + x, r.top + scy));
 			}
-			path->addLine(VSTGUI::CPoint(r.right + 1, r.bottom + 1));
-			path->addLine(VSTGUI::CPoint(r.left - 1, r.bottom + 1));
-			path->closeSubpath();
+			EQ_curve->addLine(VSTGUI::CPoint(r.right + 1, r.bottom + 1));
+			EQ_curve->addLine(VSTGUI::CPoint(r.left - 1, r.bottom + 1));
+			EQ_curve->closeSubpath();
 
 			pContext->setFrameColor(getLineColor());
 			pContext->setDrawMode(VSTGUI::kAntiAliasing);
 			pContext->setLineWidth(1.5);
 			pContext->setLineStyle(VSTGUI::kLineSolid);
-			pContext->drawGraphicsPath(path, VSTGUI::CDrawContext::kPathStroked);
-			path->forget();
+			pContext->drawGraphicsPath(EQ_curve, VSTGUI::CDrawContext::kPathStroked);
+			EQ_curve->forget();
 		}
+
+		// box outline
+		pContext->setLineWidth(1);
+		pContext->setFrameColor(getBorderColor());
+		pContext->drawRect(getViewSize(), VSTGUI::kDrawStroked);
 
 		setDirty(false);
 	};
@@ -608,6 +819,8 @@ namespace VSTGUI {
 	static const std::string kAttrBackColor = "back-color";
 	static const std::string kAttrBorderColor = "border-color";
 	static const std::string kAttrLineColor = "line-color";
+	static const std::string kAttrFFTLineColor = "FFT-line-color";
+	static const std::string kAttrFFTFillColor = "FFT-fill-color";
 
 	//------------------------------------------------------------------------
 	//  Factory for TextEdit
@@ -786,6 +999,10 @@ namespace VSTGUI {
 				v->setBorderColor(color);
 			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrLineColor), color, description))
 				v->setLineColor(color);
+			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrFFTLineColor), color, description))
+				v->setFFTLineColor(color);
+			if (UIViewCreator::stringToColor(attributes.getAttributeValue(kAttrFFTFillColor), color, description))
+				v->setFFTFillColor(color);
 
 			return true;
 		}
@@ -795,6 +1012,8 @@ namespace VSTGUI {
 			attributeNames.emplace_back(kAttrBackColor);
 			attributeNames.emplace_back(kAttrBorderColor);
 			attributeNames.emplace_back(kAttrLineColor);
+			attributeNames.emplace_back(kAttrFFTLineColor);
+			attributeNames.emplace_back(kAttrFFTFillColor);
 			return true;
 		}
 
@@ -805,6 +1024,10 @@ namespace VSTGUI {
 			if (attributeName == kAttrBorderColor)
 				return kColorType;
 			if (attributeName == kAttrLineColor)
+				return kColorType;
+			if (attributeName == kAttrFFTLineColor)
+				return kColorType;
+			if (attributeName == kAttrFFTFillColor)
 				return kColorType;
 			return kUnknownType;
 		}
@@ -834,6 +1057,16 @@ namespace VSTGUI {
 			else if (attributeName == kAttrLineColor)
 			{
 				UIViewCreator::colorToString(v->getLineColor(), stringValue, desc);
+				return true;
+			}
+			else if (attributeName == kAttrFFTLineColor)
+			{
+				UIViewCreator::colorToString(v->getFFTLineColor(), stringValue, desc);
+				return true;
+			}
+			else if (attributeName == kAttrFFTFillColor)
+			{
+				UIViewCreator::colorToString(v->getFFTFillColor(), stringValue, desc);
 				return true;
 			}
 
@@ -1377,12 +1610,15 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	for (auto index = 0u; index < numBlocks; ++index)
 	{
 		auto dataBlock = toDataBlock(blocks[index]);
-
-		EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
-		EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
-		EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
-		EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
-		EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
+		if (EQCurveView_saved) {
+			EQCurveView_saved->setFFTArray(dataBlock->samples, dataBlock->sampleRate);
+			EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
+			EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
+			EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
+			EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
+			EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
+		}
+		
 	}
 }
 

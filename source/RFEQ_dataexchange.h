@@ -15,6 +15,7 @@ namespace yg331 {
 	//------------------------------------------------------------------------
 	struct DataBlock
 	{
+
 		ParamBand_Array Band1;
 		ParamBand_Array Band2;
 		ParamBand_Array Band3;
@@ -22,6 +23,9 @@ namespace yg331 {
 		ParamBand_Array Band5;
 		double Fs;
 		bool byPass;
+
+		uint32_t sampleRate;
+		float samples[0];
 	};
 
 	//------------------------------------------------------------------------

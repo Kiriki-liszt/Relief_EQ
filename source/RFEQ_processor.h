@@ -4,6 +4,7 @@
 
 #pragma once
 #include "RFEQ_svf.h"
+#include "RFEQ_fft.h"
 #include "RFEQ_dataexchange.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
@@ -118,6 +119,12 @@ public:
 	Steinberg::tresult PLUGIN_API setState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 	Steinberg::tresult PLUGIN_API getState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 
+	//---from IAudioProcessor-------
+	Steinberg::tresult PLUGIN_API setBusArrangements(
+		Steinberg::Vst::SpeakerArrangement* inputs,  Steinberg::int32 numIns,
+		Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 numOuts
+	) SMTG_OVERRIDE;
+
 	//------------------------------------------------------------------------
 	// IConnectionPoint overrides:
 	//------------------------------------------------------------------------
@@ -159,6 +166,8 @@ protected:
 	SVF Band4[2];
 	SVF Band5[2];
 
+	// Oversampling and Latency
+
 	Flt OS_filter_x2[2];
 	const int fir_size = 69;
 	const int tap_hm = (fir_size - 1) / 2;
@@ -169,11 +178,18 @@ protected:
 
 	std::queue<double> latency_q[2];
 
+	// DataExchange
+
 	void acquireNewExchangeBlock();
 
 	std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
 	Steinberg::Vst::DataExchangeBlock currentExchangeBlock{ InvalidDataExchangeBlock };
 	uint16_t numChannels{ 0 };
+
+	// FFT
+
+	FFTProcessor FFT;
+	std::vector<float> alignas(16) fft_in = {0.0, }, fft_out = { 0.0, };
 };
 
 //------------------------------------------------------------------------

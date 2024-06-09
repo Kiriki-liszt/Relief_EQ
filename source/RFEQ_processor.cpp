@@ -51,7 +51,7 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
 		Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_filter_x2[ch].coef);
 		for (int i = 0; i < fir_size; i++) OS_filter_x2[ch].coef[i] *= 2.0;
 	}
-
+	FFT.reset();
 	return kResultOk;
 }
 
@@ -59,9 +59,73 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
 tresult PLUGIN_API RFEQ_Processor::terminate ()
 {
 	// Here the Plug-in will be de-instantiated, last possibility to remove some memory!
-	
+	fft_in.clear();
+	fft_in.shrink_to_fit();
+	fft_out.clear();
+	fft_out.shrink_to_fit();
 	//---do not forget to call parent ------
 	return AudioEffect::terminate ();
+}
+
+//------------------------------------------------------------------------
+tresult PLUGIN_API RFEQ_Processor::setBusArrangements(
+	Vst::SpeakerArrangement* inputs, int32 numIns,
+	Vst::SpeakerArrangement* outputs, int32 numOuts)
+{
+	if (numIns == 1 && numOuts == 1)
+	{
+		// the host wants Mono => Mono (or 1 channel -> 1 channel)
+		if (Vst::SpeakerArr::getChannelCount(inputs[0]) == 1 &&
+			Vst::SpeakerArr::getChannelCount(outputs[0]) == 1)
+		{
+			auto* bus = FCast<Vst::AudioBus>(audioInputs.at(0));
+			if (bus)
+			{
+				// check if we are Mono => Mono, if not we need to recreate the busses
+				if (bus->getArrangement() != inputs[0])
+				{
+					getAudioInput(0)->setArrangement(inputs[0]);
+					getAudioInput(0)->setName(STR16("Mono In"));
+					getAudioOutput(0)->setArrangement(outputs[0]);
+					getAudioOutput(0)->setName(STR16("Mono Out"));
+				}
+				return kResultOk;
+			}
+		}
+		// the host wants something else than Mono => Mono,
+		// in this case we are always Stereo => Stereo
+		else
+		{
+			auto* bus = FCast<Vst::AudioBus>(audioInputs.at(0));
+			if (bus)
+			{
+				tresult result = kResultFalse;
+
+				// the host wants 2->2 (could be LsRs -> LsRs)
+				if (Vst::SpeakerArr::getChannelCount(inputs[0]) == 2 &&
+					Vst::SpeakerArr::getChannelCount(outputs[0]) == 2)
+				{
+					getAudioInput(0)->setArrangement(inputs[0]);
+					getAudioInput(0)->setName(STR16("Stereo In"));
+					getAudioOutput(0)->setArrangement(outputs[0]);
+					getAudioOutput(0)->setName(STR16("Stereo Out"));
+					result = kResultTrue;
+				}
+				// the host want something different than 1->1 or 2->2 : in this case we want stereo
+				else if (bus->getArrangement() != Vst::SpeakerArr::kStereo)
+				{
+					getAudioInput(0)->setArrangement(Vst::SpeakerArr::kStereo);
+					getAudioInput(0)->setName(STR16("Stereo In"));
+					getAudioOutput(0)->setArrangement(Vst::SpeakerArr::kStereo);
+					getAudioOutput(0)->setName(STR16("Stereo Out"));
+					result = kResultFalse;
+				}
+
+				return result;
+			}
+		}
+	}
+	return kResultFalse;
 }
 
 //------------------------------------------------------------------------
@@ -75,9 +139,9 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
 				Vst::SpeakerArrangement arr;
 				getBusArrangement(Vst::BusDirections::kInput, 0, arr);
 				numChannels = static_cast<uint16_t> (Vst::SpeakerArr::getChannelCount(arr));
-				//auto sampleSize = sizeof(float);
+				auto sampleSize = sizeof(float);
 
-				config.blockSize = sizeof(DataBlock);
+				config.blockSize = (_fftSize * sampleSize) + sizeof(DataBlock);
 				config.numBlocks = 2;
 				//config.alignment = 32;
 				//config.userContextID = 0;
@@ -129,6 +193,8 @@ void RFEQ_Processor::acquireNewExchangeBlock()
 
 		block->Fs = 0.0;
 		block->byPass = 0;
+
+		block->sampleRate = static_cast<uint32_t> (processSetup.sampleRate);
 	}
 }
 
@@ -274,6 +340,9 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 		OS_target = newSetup.sampleRate;
 	}
 
+	fft_in.resize(newSetup.maxSamplesPerBlock, 0.0);
+	fft_out.resize(newSetup.maxSamplesPerBlock, 0.0);
+
 	return AudioEffect::setupProcessing (newSetup);
 }
 
@@ -395,6 +464,7 @@ void RFEQ_Processor::processSVF(
 
 	Vst::Sample64 _db = (24.0 * fLevel - 12.0);
 	Vst::Sample64 In_Atten = exp(log(10.0) * _db / 20.0);
+	double div_by_channels = 1.0 / numChannels;
 
 	Vst::SampleRate currFs = getSampleRate;
 	if (fParamOS == overSample_2x) currFs = getSampleRate * 2.0;
@@ -405,22 +475,8 @@ void RFEQ_Processor::processSVF(
 	int32 latency = 0;
 	if (fParamOS == overSample_2x) latency = latency_Fir_x2;
 
-	//--- send data ----------------
-	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-		acquireNewExchangeBlock();
-	if (auto block = toDataBlock(currentExchangeBlock))
-	{
-		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
-		block->Fs = currFs;
-		block->byPass = bBypass;
-		dataExchange->sendCurrentBlock();
-		acquireNewExchangeBlock();
-	}
-
+	std::fill(fft_in.begin(), fft_in.end(), 0.0);
+	std::fill(fft_out.begin(), fft_out.end(), 0.0);
 
 #define SVF_set_func(Band, Array, channel) \
 	Band[channel].setSVF( \
@@ -446,6 +502,8 @@ void RFEQ_Processor::processSVF(
 		SampleType* ptrIn = (SampleType*)inputs[channel];
 		SampleType* ptrOut = (SampleType*)outputs[channel];
 
+		float* fft_in_begin = fft_in.data();
+
 		if (latency != latency_q[channel].size()) {
 			int32 diff = latency - (int32)latency_q[channel].size();
 			if (diff > 0) for (int i = 0; i <  diff; i++) latency_q[channel].push(0.0);
@@ -454,7 +512,8 @@ void RFEQ_Processor::processSVF(
 
 		while (--samples >= 0)
 		{
-			Vst::Sample64 inputSample = *ptrIn; ptrIn++;
+			Vst::Sample64 inputSample = *ptrIn; 
+			ptrIn++;
 			Vst::Sample64 drySample = inputSample;
 			inputSample *= In_Atten;
 
@@ -498,9 +557,35 @@ void RFEQ_Processor::processSVF(
 
 			*ptrOut = (SampleType)inputSample;
 
+			*fft_in_begin += div_by_channels * (inputSample);
+			fft_in_begin++;
+
 			ptrOut++;
 		}
 	}
+	
+	FFT.processBlock(fft_in.data(), sampleFrames, 0);
+	FFT.getData(fft_out.data());
+
+
+	//--- send data ----------------
+	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+		acquireNewExchangeBlock();
+	if (auto block = toDataBlock(currentExchangeBlock))
+	{
+		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
+		block->sampleRate = getSampleRate;
+		block->Fs = currFs;
+		block->byPass = bBypass;
+		dataExchange->sendCurrentBlock();
+		acquireNewExchangeBlock();
+	}
+
 	return;
 }
 

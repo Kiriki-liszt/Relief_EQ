@@ -41,6 +41,10 @@ Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VS
 
 ## Licensing  
 
+Relief EQ is using GPL v3 license.  
+
+### VST  
+
 > Q: I would like to share the source code of my VST 3 plug-in/host on GitHub or other such platform.  
 >
 > * You can choose the GPLv3 license and feel free to share your plug-ins/host's source code including or referencing the VST 3 SDK's sources on GitHub.  
@@ -54,10 +58,27 @@ Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VS
 VSTSDK 3.7.9 used  
 VSTGUI 4.12 used  
 
+### PFFFT  
+
+PFFFT is work of Julien Pommier, with Copyright (c) 2013  Julien Pommier ( pommier@modartt.com )  
+It is under BSD-Like, and license is in the header at RFEQ_fft.h.  
+
+### C++ Wrapper for pffft  
+
+C++ Wrapper for pffft if work of Justin Johnson, obtained at [https://www.kvraudio.com/forum/viewtopic.php?p=8726913#p8726913](https://www.kvraudio.com/forum/viewtopic.php?p=8726913#p8726913)  
+As other works of him are in MIT lisence, I assumed same.  
+The lisence is in the header at RFEQ_fft.h.  
+
+### FFT handler with FIFO managment  
+
+It is work of Matthijs Hollemans, obtained at [https://github.com/hollance/fft-juce](https://github.com/hollance/fft-juce)  
+It is under MIT lisence, and you can find the license in the header at RFEQ_fft.h.  
+
 ## Version logs
 
 v1.0.0.b : intial try.  
 v1.0.0 : Official release.  Changed shelf arch.  
+v1.1.0 : FFT analyzer added.  
 
 ## How it started
 
@@ -154,6 +175,11 @@ Also, at same displayed frequency, -3dB point shelf makes much lower shelf then 
 Since the magnitude changes gradually, starts early and ends late, it feels 'transparant' and 'smooth'.  
 
 These choices in filter design and UI will guide a specific way of using an EQ, making the perception of 'they sound different'
+
+## FFT  
+
+The FFT in this plugin uses Kaiser Bessel windowing, RMS in frequency magnitudes, and no bands-per-oct smoothing.  
+Also, it runs in 4096 sample size.  
 
 ## Ref  
 

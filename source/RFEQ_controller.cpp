@@ -593,7 +593,7 @@ namespace VSTGUI {
 	std::max(std::min(MIN_FREQ * exp(FREQ_LOG_MAX * x / view.getWidth()), MAX_FREQ), MIN_FREQ)
 
 // Given a magnitude, return y screen position as 0..1 with applied tilt
-#define mag_to_01(m, freq) \
+#define mag_to_01(m) \
 	1.0 - (( (20 * log10(m)) - ceiling) / (noise_floor - ceiling));
 
 // Given a magnitude (1.0 .... very small number), return y screen position

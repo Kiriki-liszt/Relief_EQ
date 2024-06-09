@@ -19,43 +19,43 @@ namespace yg331 {
 // since these commonly-defined names are not part of the C or C++ standards
 #ifndef M_E 
 #define M_E        2.71828182845904523536   // e   
-#endif  M_E
+#endif  //M_E
 #ifndef M_LOG2E
 #define M_LOG2E    1.44269504088896340736   // log2(e)
-#endif  M_LOG2E
+#endif  //M_LOG2E
 #ifndef M_LOG10E
 #define M_LOG10E   0.434294481903251827651  // log10(e)
-#endif  M_LOG10E
+#endif  //M_LOG10E
 #ifndef M_LN2
 #define M_LN2      0.693147180559945309417  // ln(2)
-#endif  M_LN2
+#endif  //M_LN2
 #ifndef M_LN10
 #define M_LN10     2.30258509299404568402   // ln(10)
-#endif  M_LN10
+#endif  //M_LN10
 #ifndef M_PI
 #define M_PI       3.14159265358979323846   // pi
-#endif  M_PI
+#endif  //M_PI
 #ifndef M_PI_2
 #define M_PI_2     1.57079632679489661923   // pi/2
-#endif  M_PI_2
+#endif  //M_PI_2
 #ifndef M_PI_4
 #define M_PI_4     0.785398163397448309616  // pi/4
-#endif  M_PI_4
+#endif  //M_PI_4
 #ifndef M_1_PI
 #define M_1_PI     0.318309886183790671538  // 1/pi
-#endif  M_1_PI
+#endif  //M_1_PI
 #ifndef M_2_PI
 #define M_2_PI     0.636619772367581343076  // 2/pi
-#endif  M_2_PI
+#endif  //M_2_PI
 #ifndef M_2_SQRTPI
 #define M_2_SQRTPI 1.12837916709551257390   // 2/sqrt(pi)
-#endif  M_2_SQRTPI
+#endif  //M_2_SQRTPI
 #ifndef M_SQRT2
 #define M_SQRT2    1.41421356237309504880   // sqrt(2)
-#endif  M_SQRT2
+#endif  //M_SQRT2
 #ifndef M_SQRT1_2
 #define M_SQRT1_2  0.707106781186547524401  // 1/sqrt(2)
-#endif  M_SQRT1_2
+#endif  //M_SQRT1_2
 
 // #define PFFFT_SIMD_DISABLE
 
@@ -498,10 +498,10 @@ namespace yg331 {
 
         // Circular buffers for incoming and outgoing audio data.
         /* SSE and co like 16-bytes aligned pointers */
-        std::array<float, fftSize> alignas(16)  inputFifo;
-        std::array<float, fftSize> alignas(16) outputFifo;
+        alignas(16) std::array<float, fftSize>  inputFifo;
+        alignas(16) std::array<float, fftSize> outputFifo;
 
         // The FFT working space. Contains interleaved complex numbers.
-        std::array<float, fftSize * 2> alignas(16) fftData;
+        alignas(16) std::array<float, fftSize * 2>  fftData;
     };
 }

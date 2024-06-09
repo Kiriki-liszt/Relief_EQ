@@ -189,7 +189,7 @@ protected:
 	// FFT
 
 	FFTProcessor FFT;
-	std::vector<float> alignas(16) fft_in = {0.0, }, fft_out = { 0.0, };
+    alignas(16) std::vector<float> fft_in = {0.0, }, fft_out = { 0.0, };
 };
 
 //------------------------------------------------------------------------

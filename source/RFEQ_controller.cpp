@@ -582,7 +582,7 @@ namespace VSTGUI {
 		pContext->drawRect(getViewSize(), VSTGUI::kDrawFilledAndStroked);
 
 		double MAX_FREQ = 22000.0;
-		double MIN_FREQ = 20.0;
+		double MIN_FREQ = 10.0;
 		double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
 		double ceiling = 0.0;
 		double noise_floor = -72.0;
@@ -765,7 +765,7 @@ namespace VSTGUI {
 
 			VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
 			EQ_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
-			for (double x = -1; x <= r.getWidth() + 1; x+=0.1) {
+			for (double x = -1; x <= r.getWidth() + 1; x+=0.05) {
 				double tmp = MIN_FREQ * exp(FREQ_LOG_MAX * x / r.getWidth());
 				double freq = (std::max)((std::min)(tmp, MAX_FREQ), MIN_FREQ);
 

@@ -79,6 +79,7 @@ It is under MIT lisence, and you can find the license in the header at RFEQ_fft.
 v1.0.0.b : intial try.  
 v1.0.0 : Official release.  Changed shelf arch.  
 v1.1.0 : FFT analyzer added.  
+v1.1.1 : Crash after closing the plugin window fixed.  
 
 ## How it started
 

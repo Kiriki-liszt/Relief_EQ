@@ -157,9 +157,9 @@ namespace VSTGUI {
 		static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
 		static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
 
-		float fft_linear[2049] = { 0.0 };
-		float fft_RMS[2049] = { 0.0 };
-		float fft_freq[2049] = { 0.0 };
+		float fft_linear[numBins] = { 0.0 };
+		float fft_RMS[numBins] = { 0.0 };
+		float fft_freq[numBins] = { 0.0 };
 
 		/*
 		// 11 octs, 12 per oct = 132 bands max.

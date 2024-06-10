@@ -23,6 +23,7 @@ namespace yg331 {
 		ParamBand_Array Band5;
 		double Fs;
 		bool byPass;
+		double level;
 
 		uint32_t sampleRate;
 		float samples[0];

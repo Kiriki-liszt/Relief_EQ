@@ -189,7 +189,11 @@ protected:
 	// FFT
 
 	FFTProcessor FFT;
-    alignas(16) std::vector<float> fft_in = {0.0, }, fft_out = { 0.0, };
+	alignas(16) std::vector<float> fft_in = { 0.0, };  // size = maxSamples
+	alignas(16) std::vector<float> fft_fps = { 0.0, }; // size = samples_per_block
+    alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
+	static constexpr int update_rate = 60;
+	int sample_cnt = 0, pos = 0;
 };
 
 //------------------------------------------------------------------------

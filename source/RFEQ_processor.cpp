@@ -61,6 +61,8 @@ tresult PLUGIN_API RFEQ_Processor::terminate ()
 	// Here the Plug-in will be de-instantiated, last possibility to remove some memory!
 	fft_in.clear();
 	fft_in.shrink_to_fit();
+	fft_fps.clear();
+	fft_fps.shrink_to_fit();
 	fft_out.clear();
 	fft_out.shrink_to_fit();
 	//---do not forget to call parent ------
@@ -142,9 +144,9 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
 				auto sampleSize = sizeof(float);
 
 				config.blockSize = (_fftSize * sampleSize) + sizeof(DataBlock);
-				config.numBlocks = 2;
-				//config.alignment = 32;
-				//config.userContextID = 0;
+				config.numBlocks = 1;
+				config.alignment = 16;
+				config.userContextID = 0;
 				return true;
 			};
 
@@ -183,16 +185,15 @@ void RFEQ_Processor::acquireNewExchangeBlock()
 	currentExchangeBlock = dataExchange->getCurrentOrNewBlock();
 	if (auto block = toDataBlock(currentExchangeBlock))
 	{
-		ParamBand_Array Clean = { 0.0, };
-
-		memcpy(block->Band1, Clean, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band2, Clean, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band3, Clean, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band4, Clean, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band5, Clean, ParamArray::ParamArray_size * sizeof(double));
+		memset(block->Band1, 0, sizeof(ParamBand_Array));
+		memset(block->Band2, 0, sizeof(ParamBand_Array));
+		memset(block->Band3, 0, sizeof(ParamBand_Array));
+		memset(block->Band4, 0, sizeof(ParamBand_Array));
+		memset(block->Band5, 0, sizeof(ParamBand_Array));
 
 		block->Fs = 0.0;
 		block->byPass = 0;
+		block->level = 0.0;
 
 		block->sampleRate = static_cast<uint32_t> (processSetup.sampleRate);
 	}
@@ -340,8 +341,10 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 		OS_target = newSetup.sampleRate;
 	}
 
-	fft_in.resize(newSetup.maxSamplesPerBlock, 0.0);
-	fft_out.resize(newSetup.maxSamplesPerBlock, 0.0);
+	int sample_per_frame = (int)newSetup.sampleRate / update_rate;
+	fft_in.resize(newSetup.sampleRate, 0.0);
+	fft_fps.resize(sample_per_frame, 0.0);
+	fft_out.resize(_numBins, 0.0);
 
 	return AudioEffect::setupProcessing (newSetup);
 }
@@ -465,6 +468,7 @@ void RFEQ_Processor::processSVF(
 	Vst::Sample64 _db = (24.0 * fLevel - 12.0);
 	Vst::Sample64 In_Atten = exp(log(10.0) * _db / 20.0);
 	double div_by_channels = 1.0 / numChannels;
+	int sample_per_frame = (int)getSampleRate / update_rate;
 
 	Vst::SampleRate currFs = getSampleRate;
 	if (fParamOS == overSample_2x) currFs = getSampleRate * 2.0;
@@ -475,8 +479,8 @@ void RFEQ_Processor::processSVF(
 	int32 latency = 0;
 	if (fParamOS == overSample_2x) latency = latency_Fir_x2;
 
-	std::fill(fft_in.begin(), fft_in.end(), 0.0);
-	std::fill(fft_out.begin(), fft_out.end(), 0.0);
+	memset(fft_in.data(),  0, fft_in.size());
+	memset(fft_out.data(), 0, fft_out.size());
 
 #define SVF_set_func(Band, Array, channel) \
 	Band[channel].setSVF( \
@@ -499,7 +503,7 @@ void RFEQ_Processor::processSVF(
 
 		int32 samples = sampleFrames;
 
-		SampleType* ptrIn = (SampleType*)inputs[channel];
+		SampleType* ptrIn  = (SampleType*)inputs[channel];
 		SampleType* ptrOut = (SampleType*)outputs[channel];
 
 		float* fft_in_begin = fft_in.data();
@@ -555,35 +559,50 @@ void RFEQ_Processor::processSVF(
 				inputSample = delayed;
 			}
 
-			*ptrOut = (SampleType)inputSample;
-
 			*fft_in_begin += div_by_channels * (inputSample);
 			fft_in_begin++;
 
+			*ptrOut = (SampleType)inputSample;
 			ptrOut++;
 		}
 	}
-	
-	FFT.processBlock(fft_in.data(), sampleFrames, 0);
-	FFT.getData(fft_out.data());
-
-
-	//--- send data ----------------
-	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-		acquireNewExchangeBlock();
-	if (auto block = toDataBlock(currentExchangeBlock))
 	{
-		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
-		block->sampleRate = getSampleRate;
-		block->Fs = currFs;
-		block->byPass = bBypass;
-		dataExchange->sendCurrentBlock();
-		acquireNewExchangeBlock();
+
+		int32 samples = sampleFrames;
+		float* fft_in_begin = fft_in.data();
+		while (--samples >= 0)
+		{
+			fft_fps.at(pos) = *fft_in_begin;
+			pos++;
+			fft_in_begin++;
+
+			if (pos == sample_per_frame)
+			{
+				pos = 0;
+
+				FFT.processBlock(fft_fps.data(), sample_per_frame, 0);
+				FFT.getData(fft_out.data());
+
+				//--- send data ----------------
+				if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+					acquireNewExchangeBlock();
+				if (auto block = toDataBlock(currentExchangeBlock))
+				{
+					memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+					memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+					memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+					memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+					memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+					memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
+					block->sampleRate = getSampleRate;
+					block->Fs = currFs;
+					block->byPass = bBypass;
+					block->level = fLevel;
+					dataExchange->sendCurrentBlock();
+					acquireNewExchangeBlock();
+				}
+			}
+		}
 	}
 
 	return;

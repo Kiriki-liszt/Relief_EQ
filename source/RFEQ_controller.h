@@ -99,6 +99,7 @@ namespace VSTGUI {
 
 		void setFracOct();
 		void setFFTArray(float* array, double sampleRate);
+		void setLevel(double level);
 		void setBandArray(double* array, double Fs, bool _byPass, int num);
 
 		// get/set Attributes
@@ -149,8 +150,8 @@ namespace VSTGUI {
 		SVF Band4;
 		SVF Band5;
 
-		double filterSamplerate = 96000.0;
 		bool byPass;
+		double level;
 
 		static constexpr int fftOrder = yg331::_fftOrder;
 		static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
@@ -160,6 +161,7 @@ namespace VSTGUI {
 		float fft_RMS[numBins] = { 0.0 };
 		float fft_freq[numBins] = { 0.0 };
 
+		/*
 		// 11 octs, 12 per oct = 132 bands max.
 #define MAX_BANDS 132
 #define INTERVAL 12
@@ -167,6 +169,7 @@ namespace VSTGUI {
 		float bandsLower[MAX_BANDS] = { 0.0, };
 		float bandsUpper[MAX_BANDS] = { 0.0, };
 		float bandsOutput[MAX_BANDS] = { 0.0, };
+		*/
 	};
 }
 

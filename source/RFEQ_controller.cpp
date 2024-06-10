@@ -398,6 +398,8 @@ namespace VSTGUI {
 		FFTLineColor = kBlackCColor;
 		FFTFillColor = kBlackCColor;
 		byPass = false;
+		level = 0.0;
+		idleRate = 60;
 		setWantsIdle(true);
 	}
 	EQCurveView::EQCurveView(const EQCurveView& v)
@@ -407,6 +409,7 @@ namespace VSTGUI {
 		, BorderColor(v.BorderColor)
 		, FFTLineColor(v.FFTLineColor)
 		, FFTFillColor(v.FFTFillColor)
+		, level(v.level)
 		, byPass(v.byPass)
 	{
 		setWantsIdle(true);
@@ -434,11 +437,15 @@ namespace VSTGUI {
 		default:
 			break;
 		}
-		filterSamplerate = Fs;
 		byPass = _byPass;
 	}
 
+	void EQCurveView::setLevel(double _level) {
+		level = (24.0 * _level - 12.0);
+	}
+
 	void EQCurveView::setFracOct() {
+		/*
 		bandsCenter[0] = 20.0;
 		bandsLower[0] = bandsCenter[0] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
 		bandsUpper[0] = bandsCenter[0] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
@@ -448,6 +455,7 @@ namespace VSTGUI {
 			bandsLower[band] = bandsCenter[band] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
 			bandsUpper[band] = bandsCenter[band] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
 		}
+		*/
 	}
 
 
@@ -487,8 +495,8 @@ namespace VSTGUI {
 		//for (int i = 1; i < 10; i++) FDebugPrint("%f ", fft_linear[i]);
 		//FDebugPrint("\n");
 
+		/*
 		memset(bandsOutput, 0, sizeof(bandsOutput));
-
 
 		if (false) {
 			for (int band = 0, lower = 0, upper = 0; band < MAX_BANDS; band++)
@@ -544,8 +552,6 @@ namespace VSTGUI {
 					continue;
 				}
 
-
-
 				// 1 bin, n bands
 				if ((fft_freq[safe_bin(bin, -1)] <= bandsLower[band]) && (bandsUpper[band] < fft_freq[safe_bin(bin, 1)]))
 				{
@@ -560,11 +566,10 @@ namespace VSTGUI {
 					band++;
 					continue;
 				}
-
 				bin++;
 			}
 		}
-
+		*/
 	}
 
 
@@ -580,7 +585,7 @@ namespace VSTGUI {
 		double MIN_FREQ = 20.0;
 		double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
 		double ceiling = 0.0;
-		double noise_floor = -60.0;
+		double noise_floor = -72.0;
 		double DB_EQ_RANGE = 15.0;
 
 
@@ -667,10 +672,7 @@ namespace VSTGUI {
 		{
 			VSTGUI::CRect r(getViewSize());
 
-			VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
-			//path->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
-
-			double y = mag_to_01(bandsOutput[0]);
+			double y = mag_to_01(fft_linear[0]);
 			y = (std::max)((std::min)(y, 1.0), 0.0);
 			y *= r.getHeight();
 			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y));
@@ -767,7 +769,7 @@ namespace VSTGUI {
 				double tmp = MIN_FREQ * exp(FREQ_LOG_MAX * x / r.getWidth());
 				double freq = (std::max)((std::min)(tmp, MAX_FREQ), MIN_FREQ);
 
-				double dB_level = 0.0; // level;
+				double dB_level = level; // level;
 
 				double dB_1 = 20 * log10(Band1.mag_response(freq));
 				double dB_2 = 20 * log10(Band2.mag_response(freq));
@@ -1612,6 +1614,7 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 		auto dataBlock = toDataBlock(blocks[index]);
 		if (EQCurveView_saved) {
 			EQCurveView_saved->setFFTArray(dataBlock->samples, dataBlock->sampleRate);
+			EQCurveView_saved->setLevel(dataBlock->level);
 			EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
 			EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
 			EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);

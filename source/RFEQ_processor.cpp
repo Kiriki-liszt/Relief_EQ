@@ -566,7 +566,31 @@ void RFEQ_Processor::processSVF(
 			ptrOut++;
 		}
 	}
+
+
+	FFT.processBlock(fft_in.data(), sampleFrames, 0);
+	FFT.getData(fft_out.data());
+
+	//--- send data ----------------
+	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+		acquireNewExchangeBlock();
+	if (auto block = toDataBlock(currentExchangeBlock))
 	{
+		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
+		block->sampleRate = getSampleRate;
+		block->Fs = currFs;
+		block->byPass = bBypass;
+		block->level = fLevel;
+		dataExchange->sendCurrentBlock();
+		acquireNewExchangeBlock();
+	}
+
+	if(false){
 
 		int32 samples = sampleFrames;
 		float* fft_in_begin = fft_in.data();

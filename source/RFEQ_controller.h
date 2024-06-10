@@ -157,9 +157,9 @@ namespace VSTGUI {
 		static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
 		static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
 
-		float fft_linear[numBins] = { 0.0 };
-		float fft_RMS[numBins] = { 0.0 };
-		float fft_freq[numBins] = { 0.0 };
+		float fft_linear[2049] = { 0.0 };
+		float fft_RMS[2049] = { 0.0 };
+		float fft_freq[2049] = { 0.0 };
 
 		/*
 		// 11 octs, 12 per oct = 132 bands max.
@@ -176,6 +176,108 @@ namespace VSTGUI {
 
 namespace yg331 {
 
+
+
+
+//------------------------------------------------------------------------
+// EQCurveViewController
+//------------------------------------------------------------------------
+template <typename ControllerType>
+class EQCurveViewController
+	: public VSTGUI::IController
+	, public VSTGUI::ViewListenerAdapter
+	// , public Steinberg::FObject
+{
+public:
+	EQCurveViewController(
+		ControllerType* _mainController
+	)
+		: mainController(_mainController)
+		, curveView(nullptr)
+	{
+	}
+
+	~EQCurveViewController() override
+	{
+		if (curveView) viewWillDelete(curveView);
+
+		mainController->removeEQCurveViewController(this);
+	}
+
+	enum Tags
+	{
+		kSendMessageTag = 1000
+	};
+
+	void setFFTArray(float* array, double sampleRate)
+	{
+		curveView->setFFTArray(array, sampleRate);
+	};
+	void setLevel(double level)
+	{
+		curveView->setLevel(level);
+	};
+	void setBandArray(double* array, double Fs, bool _byPass, int num) 
+	{
+		curveView->setBandArray(array, Fs, _byPass, num);
+	};
+
+private:
+	using CControl = VSTGUI::CControl;
+	using CView = VSTGUI::CView;
+	using EQCurveView = VSTGUI::EQCurveView;
+	using UTF8String = VSTGUI::UTF8String;
+	using UIAttributes = VSTGUI::UIAttributes;
+	using IUIDescription = VSTGUI::IUIDescription;
+
+	/*
+	void PLUGIN_API update(
+		Steinberg::FUnknown* changedUnknown,
+		Steinberg::int32 message)
+	{
+		if (curveView)
+		{
+		}
+	}
+	*/
+
+	//--- from IControlListener ----------------------
+	void valueChanged(CControl* pControl) override { }
+	void controlBeginEdit(CControl* /*pControl*/) override {}
+	void controlEndEdit(CControl* pControl) override  { }
+
+	//--- from IControlListener ----------------------
+	//--- is called when a view is created -----
+	CView* verifyView(
+		CView* view,
+		const UIAttributes& /*attributes*/,
+		const IUIDescription* /*description*/) override
+	{
+		if (EQCurveView* control = dynamic_cast<EQCurveView*>(view); control)
+		{
+			curveView = control;
+			curveView->registerControlListener(this);
+			//curveView->setValue(0.0); // do init thing
+		}
+		return view;
+	}
+
+	//--- from IViewListenerAdapter ----------------------
+	//--- is called when a view will be deleted: the editor is closed -----
+	void viewWillDelete(CView* view) override
+	{
+		if (dynamic_cast<EQCurveView*> (view) == curveView && curveView)
+		{
+			curveView->unregisterControlListener(this);
+			curveView = nullptr;
+		}
+	}
+
+	ControllerType* mainController;
+	EQCurveView* curveView;
+};
+
+
 //------------------------------------------------------------------------
 //  RFEQ_Controller
 //------------------------------------------------------------------------
@@ -188,6 +290,8 @@ public:
 //------------------------------------------------------------------------
 	RFEQ_Controller () = default;
 	~RFEQ_Controller () SMTG_OVERRIDE = default;
+
+	using EQCurveViewController = EQCurveViewController<RFEQ_Controller>;
 
     // Create function
 	static Steinberg::FUnknown* createInstance (void* /*context*/)
@@ -214,13 +318,15 @@ public:
                                                          Steinberg::Vst::ParamValue& valueNormalized) SMTG_OVERRIDE;
 	// VST3EditorDelegate
 	/** verify a view after it was created */
+	/*
 	VSTGUI::CView* PLUGIN_API verifyView(VSTGUI::CView* view, 
 	                                     const VSTGUI::UIAttributes& attributes,
 	                                     const VSTGUI::IUIDescription* description, 
 	                                     VSTGUI::VST3Editor* editor) SMTG_OVERRIDE;
+	*/
 
 	// EditController
-	Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) override;
+	Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
 	void PLUGIN_API update(Steinberg::FUnknown* changedUnknown, Steinberg::int32 message) SMTG_OVERRIDE;
 	//void editorAttached(Steinberg::Vst::EditorView* editor) SMTG_OVERRIDE;
 	//void editorRemoved(Steinberg::Vst::EditorView* editor) SMTG_OVERRIDE;
@@ -229,19 +335,38 @@ public:
 	// IDataExchangeReceiver
 	void PLUGIN_API queueOpened (Steinberg::Vst::DataExchangeUserContextID userContextID,
 	                             Steinberg::uint32 blockSize,
-	                             Steinberg::TBool& dispatchOnBackgroundThread) override;
-	void PLUGIN_API queueClosed (Steinberg::Vst::DataExchangeUserContextID userContextID) override;
+	                             Steinberg::TBool& dispatchOnBackgroundThread) SMTG_OVERRIDE;
+	void PLUGIN_API queueClosed (Steinberg::Vst::DataExchangeUserContextID userContextID) SMTG_OVERRIDE;
 	void PLUGIN_API onDataExchangeBlocksReceived (Steinberg::Vst::DataExchangeUserContextID userContextID,
 	                                              Steinberg::uint32 numBlocks, 
 	                                              Steinberg::Vst::DataExchangeBlock* blocks,
-	                                              Steinberg::TBool onBackgroundThread) override;
+	                                              Steinberg::TBool onBackgroundThread) SMTG_OVERRIDE;
 
-
-	void viewIsBeingDeleted(VSTGUI::CView* view)
+	//---from VST3EditorDelegate-----------
+	VSTGUI::IController* createSubController (VSTGUI::UTF8StringPtr name, 
+	                                          const VSTGUI::IUIDescription* description,
+	                                          VSTGUI::VST3Editor* editor) SMTG_OVERRIDE
 	{
-		if (view == EQCurveView_saved)
-			EQCurveView_saved = nullptr;
-	}
+		if (VSTGUI::UTF8StringView(name) == "EQCurveViewController")
+		{
+			auto* controller = new EQCurveViewController(this);
+			addEQCurveViewController(controller);
+			return controller;
+		}
+		return nullptr;
+	};
+
+	//---Internal functions-------
+	void addEQCurveViewController(EQCurveViewController* controller)
+	{
+		curveControllers.push_back(controller);
+	};
+	void removeEQCurveViewController(EQCurveViewController* controller) 
+	{
+		auto it = std::find(curveControllers.begin(), curveControllers.end(), controller);
+		if (it != curveControllers.end())
+			curveControllers.erase(it);
+	};
 
  	//---Interface---------
 	DEFINE_INTERFACES
@@ -268,7 +393,8 @@ protected:
 
 	Steinberg::Vst::DataExchangeReceiverHandler dataExchange{ this };
 
-	VSTGUI::EQCurveView* EQCurveView_saved = nullptr;
+	using UICurveControllerList = std::vector<EQCurveViewController*>;
+	UICurveControllerList curveControllers;
 
 	Steinberg::tchar* Filter_Types[SVF::kFltNum + 1] = {
 		(Steinberg::tchar*)STR("Bell"),

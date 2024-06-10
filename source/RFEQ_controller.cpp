@@ -1355,7 +1355,7 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 tresult PLUGIN_API RFEQ_Controller::terminate ()
 {
 	// Here the Plug-in will be de-instantiated, last possibility to remove some memory!
-	EQCurveView_saved = nullptr;
+
 	//---do not forget to call parent ------
 	return EditControllerEx1::terminate ();
 }
@@ -1499,21 +1499,21 @@ IPlugView* PLUGIN_API RFEQ_Controller::createView (FIDString name)
 	}
 	return nullptr;
 }
-
+/*
 VSTGUI::CView* PLUGIN_API RFEQ_Controller::verifyView(
 	VSTGUI::CView* view, 
 	const VSTGUI::UIAttributes& attributes,
 	const VSTGUI::IUIDescription* description, 
 	VSTGUI::VST3Editor* editor) 
 {
-	if (auto control = dynamic_cast<VSTGUI::EQCurveView*>(view); control /* && control->getTag() == kMyTag */)
+	if (auto control = dynamic_cast<VSTGUI::EQCurveView*>(view); control ) // && control->getTag() == kMyTag 
 	{
 		EQCurveView_saved = control;
 	}
 
 	return view;
 };
-
+*/
 void PLUGIN_API RFEQ_Controller::update(FUnknown* changedUnknown, int32 message)
 {
 	EditControllerEx1::update(changedUnknown, message);
@@ -1601,7 +1601,15 @@ void PLUGIN_API RFEQ_Controller::queueClosed(Vst::DataExchangeUserContextID user
 	//FDebugPrint("Data Exchange Queue closed.\n");
 }
 
-//------------------------------------------------------------------------
+#define paramBand_array_copy(dst, src) \
+	dst[ParamArray_In] = src[ParamArray_In]; \
+	dst[ParamArray_Hz] = src[ParamArray_Hz]; \
+	dst[ParamArray_Q] = src[ParamArray_Q]; \
+	dst[ParamArray_dB] = src[ParamArray_dB]; \
+	dst[ParamArray_Type] = src[ParamArray_Type]; \
+	dst[ParamArray_Order] = src[ParamArray_Order]; \
+
+	//------------------------------------------------------------------------
 void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	Vst::DataExchangeUserContextID userContextID,
 	uint32 numBlocks,
@@ -1612,16 +1620,45 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	for (auto index = 0u; index < numBlocks; ++index)
 	{
 		auto dataBlock = toDataBlock(blocks[index]);
-		if (EQCurveView_saved) {
-			EQCurveView_saved->setFFTArray(dataBlock->samples, dataBlock->sampleRate);
-			EQCurveView_saved->setLevel(dataBlock->level);
-			EQCurveView_saved->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
-			EQCurveView_saved->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
-			EQCurveView_saved->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
-			EQCurveView_saved->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
-			EQCurveView_saved->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
+
+		/*
+		ParamBand_Array band1, band2, band3, band4, band5;
+		float buff[_numBins] = { 0.0, };
+		double getSampleRate, currFs, bBypass, level;
+		paramBand_array_copy(band1, dataBlock->Band1);
+		paramBand_array_copy(band2, dataBlock->Band2);
+		paramBand_array_copy(band3, dataBlock->Band3);
+		paramBand_array_copy(band4, dataBlock->Band4);
+		paramBand_array_copy(band5, dataBlock->Band5);
+		for (int i = 0; i < _numBins; i++) buff[i] = dataBlock->samples[i];
+		// memcpy(buff, dataBlock->samples, _numBins * sizeof(float));
+		getSampleRate = dataBlock->sampleRate;
+		level = dataBlock->level;
+		currFs = dataBlock->Fs;
+		bBypass = dataBlock->byPass;
+		*/
+
+		if (!curveControllers.empty()) {
+			for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++) {
+				/*
+				(*iter)->setFFTArray(buff, getSampleRate);
+				(*iter)->setLevel(level);
+				(*iter)->setBandArray(band1, currFs, bBypass, 1);
+				(*iter)->setBandArray(band2, currFs, bBypass, 2);
+				(*iter)->setBandArray(band3, currFs, bBypass, 3);
+				(*iter)->setBandArray(band4, currFs, bBypass, 4);
+				(*iter)->setBandArray(band5, currFs, bBypass, 5);
+				*/
+
+				(*iter)->setFFTArray(dataBlock->samples, dataBlock->sampleRate);
+				(*iter)->setLevel(dataBlock->level);
+				(*iter)->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
+				(*iter)->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
+				(*iter)->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
+				(*iter)->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
+				(*iter)->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
+			}
 		}
-		
 	}
 }
 

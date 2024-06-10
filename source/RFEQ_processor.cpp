@@ -145,7 +145,7 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
 
 				config.blockSize = (_fftSize * sampleSize) + sizeof(DataBlock);
 				config.numBlocks = 1;
-				config.alignment = 16;
+				config.alignment = 32;
 				config.userContextID = 0;
 				return true;
 			};
@@ -342,8 +342,8 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 	}
 
 	int sample_per_frame = (int)newSetup.sampleRate / update_rate;
-	fft_in.resize(newSetup.sampleRate, 0.0);
-	fft_fps.resize(sample_per_frame, 0.0);
+	fft_in.resize(newSetup.maxSamplesPerBlock+1, 0.0);
+	fft_fps.resize(sample_per_frame+1, 0.0);
 	fft_out.resize(_numBins, 0.0);
 
 	return AudioEffect::setupProcessing (newSetup);
@@ -576,7 +576,7 @@ void RFEQ_Processor::processSVF(
 			pos++;
 			fft_in_begin++;
 
-			if (pos == sample_per_frame)
+			if (pos >= sample_per_frame)
 			{
 				pos = 0;
 
@@ -586,6 +586,7 @@ void RFEQ_Processor::processSVF(
 				//--- send data ----------------
 				if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
 					acquireNewExchangeBlock();
+                
 				if (auto block = toDataBlock(currentExchangeBlock))
 				{
 					memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
@@ -600,6 +601,10 @@ void RFEQ_Processor::processSVF(
 					block->level = fLevel;
 					dataExchange->sendCurrentBlock();
 					acquireNewExchangeBlock();
+                    
+                    block = toDataBlock (currentExchangeBlock);
+                                    if (block == nullptr)
+                                        break;
 				}
 			}
 		}

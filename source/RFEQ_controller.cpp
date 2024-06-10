@@ -672,10 +672,10 @@ namespace VSTGUI {
 		{
 			VSTGUI::CRect r(getViewSize());
 
-			double y = mag_to_01(fft_linear[0]);
-			y = (std::max)((std::min)(y, 1.0), 0.0);
-			y *= r.getHeight();
-			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y));
+			double y_start = mag_to_01(fft_linear[0]);
+            y_start = (std::max)((std::min)(y_start, 1.0), 0.0);
+            y_start *= r.getHeight();
+			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y_start));
 
 			// RAW
 			for (int bin = 0; bin < numBins; ++bin) {
@@ -850,7 +850,7 @@ namespace VSTGUI {
 		bool apply(
 			CView* view,
 			const UIAttributes& attributes,
-			const IUIDescription* description) const
+			const IUIDescription* description) const override
 		{
 			auto* KnobText = dynamic_cast<MyKnobText*> (view);
 
@@ -886,7 +886,7 @@ namespace VSTGUI {
 			return true;
 		}
 
-		bool getAttributeNames(StringList& attributeNames) const
+		bool getAttributeNames(StringList& attributeNames) const override
 		{
 			attributeNames.emplace_back(UIViewCreator::kAttrAngleStart);
 			attributeNames.emplace_back(UIViewCreator::kAttrAngleRange);
@@ -898,7 +898,7 @@ namespace VSTGUI {
 			return true;
 		}
 
-		AttrType getAttributeType(const std::string& attributeName) const
+		AttrType getAttributeType(const std::string& attributeName) const override
 		{
 			if (attributeName == UIViewCreator::kAttrAngleStart)
 				return kFloatType;
@@ -922,7 +922,7 @@ namespace VSTGUI {
 			CView* view,
 			const string& attributeName,
 			string& stringValue,
-			const IUIDescription* desc) const
+			const IUIDescription* desc) const override
 		{
 			auto* KnobText = dynamic_cast<MyKnobText*> (view);
 			if (!KnobText)
@@ -987,7 +987,7 @@ namespace VSTGUI {
 		bool apply(
 			CView* view,
 			const UIAttributes& attributes,
-			const IUIDescription* description) const
+			const IUIDescription* description) const override
 		{
 			auto* v = dynamic_cast<EQCurveView*> (view);
 
@@ -1009,7 +1009,7 @@ namespace VSTGUI {
 			return true;
 		}
 
-		bool getAttributeNames(StringList& attributeNames) const
+		bool getAttributeNames(StringList& attributeNames) const override
 		{
 			attributeNames.emplace_back(kAttrBackColor);
 			attributeNames.emplace_back(kAttrBorderColor);
@@ -1019,7 +1019,7 @@ namespace VSTGUI {
 			return true;
 		}
 
-		AttrType getAttributeType(const std::string& attributeName) const
+		AttrType getAttributeType(const std::string& attributeName) const override
 		{
 			if (attributeName == kAttrBackColor)
 				return kColorType;
@@ -1039,7 +1039,7 @@ namespace VSTGUI {
 			CView* view,
 			const string& attributeName,
 			string& stringValue,
-			const IUIDescription* desc) const
+			const IUIDescription* desc) const override
 		{
 			auto* v = dynamic_cast<EQCurveView*> (view);
 

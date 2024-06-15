@@ -167,7 +167,7 @@ protected:
 	SVF Band5[2];
 
 	// Oversampling and Latency
-
+	Steinberg::Vst::ParamValue OS_target = 0.0;
 	Flt OS_filter_x2[2];
 	const int fir_size = 69;
 	const int tap_hm = (fir_size - 1) / 2;

@@ -317,9 +317,27 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		else {
 			processSVF<Vst::Sample64>((Vst::Sample64**)in, (Vst::Sample64**)out, numChannels, getSampleRate, data.numSamples);
 		}
-		
-		
 	}
+
+	//--- send data ----------------
+	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
+		acquireNewExchangeBlock();
+	if (auto block = toDataBlock(currentExchangeBlock))
+	{
+		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
+		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
+		block->sampleRate = getSampleRate;
+		block->Fs = OS_target;
+		block->byPass = bBypass;
+		block->level = fLevel;
+		dataExchange->sendCurrentBlock();
+		acquireNewExchangeBlock();
+	}
+
 	return kResultOk;
 }
 
@@ -335,7 +353,7 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 {
 	//--- called before any processing ----
 
-	Vst::ParamValue OS_target = 0.0;
+	
 	if (newSetup.sampleRate <= 48000.0) {
 		fParamOS = overSample_2x;
 		OS_target = 2 * newSetup.sampleRate;
@@ -575,24 +593,7 @@ void RFEQ_Processor::processSVF(
 	FFT.processBlock(fft_in.data(), sampleFrames, 0);
 	FFT.getData(fft_out.data());
 
-	//--- send data ----------------
-	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-		acquireNewExchangeBlock();
-	if (auto block = toDataBlock(currentExchangeBlock))
-	{
-		memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
-		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
-		block->sampleRate = getSampleRate;
-		block->Fs = currFs;
-		block->byPass = bBypass;
-		block->level = fLevel;
-		dataExchange->sendCurrentBlock();
-		acquireNewExchangeBlock();
-	}
+	
 
 	if(false){
 

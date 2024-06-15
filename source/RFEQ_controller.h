@@ -412,6 +412,20 @@ protected:
 		(Steinberg::tchar*)STR("18"), 
 		(Steinberg::tchar*)STR("24")
 	};
+
+
+	bool                       bBypass = false;
+	Steinberg::Vst::ParamValue fLevel  = 0.5;
+	Steinberg::Vst::ParamValue fOutput = 0.0;
+	Steinberg::Vst::ParamValue fZoom   = 2.0 / 6.0;
+	overSample                 fParamOS = overSample_2x;
+
+	ParamBand_Array fParamBand1_Array = { 1.0, SVF::_Hz_to_norm(80.0),    SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+	ParamBand_Array fParamBand2_Array = { 1.0, SVF::_Hz_to_norm(200.0),   SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+	ParamBand_Array fParamBand3_Array = { 1.0, SVF::_Hz_to_norm(2000.0),  SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+	ParamBand_Array fParamBand4_Array = { 1.0, SVF::_Hz_to_norm(6000.0),  SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+	ParamBand_Array fParamBand5_Array = { 1.0, SVF::_Hz_to_norm(16000.0), SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+
 };
 
 //------------------------------------------------------------------------

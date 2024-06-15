@@ -1406,26 +1406,45 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
 	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
 	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
 	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand1_Q, savedBand1_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand2_Q, savedBand2_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand3_Q, savedBand3_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand4_Q, savedBand4_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand5_Q, savedBand5_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand1_Q,  savedBand1_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand2_Q,  savedBand2_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand3_Q,  savedBand3_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand4_Q,  savedBand4_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand5_Q,  savedBand5_Array[ParamArray_Q]);
 	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
 	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
 	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
 	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
 	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand1_Type, savedBand1_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand2_Type, savedBand2_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand3_Type, savedBand3_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand4_Type, savedBand4_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand5_Type, savedBand5_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand1_Type,  savedBand1_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand2_Type,  savedBand2_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand3_Type,  savedBand3_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand4_Type,  savedBand4_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand5_Type,  savedBand5_Array[ParamArray_Type]);
 	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
 	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
 	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
 	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
 	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
+
+#define Arrcpy(dst, src) \
+	dst[ParamArray_In]    = src[ParamArray_In];   \
+	dst[ParamArray_Hz]    = src[ParamArray_Hz];   \
+	dst[ParamArray_Q]     = src[ParamArray_Q];    \
+	dst[ParamArray_dB]    = src[ParamArray_dB];   \
+	dst[ParamArray_Type]  = src[ParamArray_Type]; \
+	dst[ParamArray_Order] = src[ParamArray_Order]; 
+
+	bBypass = savedBypass > 0;
+	fZoom   = savedZoom;
+	fLevel  = savedLevel;
+	fOutput = savedOutput;
+
+	Arrcpy(fParamBand1_Array, savedBand1_Array)
+	Arrcpy(fParamBand2_Array, savedBand2_Array)
+	Arrcpy(fParamBand3_Array, savedBand3_Array)
+	Arrcpy(fParamBand4_Array, savedBand4_Array)
+	Arrcpy(fParamBand5_Array, savedBand5_Array)
 
 	return kResultOk;
 }
@@ -1457,6 +1476,85 @@ tresult PLUGIN_API RFEQ_Controller::setState (IBStream* state)
 	for (auto& uiMessageController : uiMessageControllers)
 		uiMessageController->setMessageText(defaultMessageText);
 	*/
+
+	if (!state)
+		return kResultFalse;
+
+	IBStreamer streamer(state, kLittleEndian);
+
+	Vst::ParamValue savedZoom   = 0.0;
+	Vst::ParamValue savedLevel  = 0.0;
+	Vst::ParamValue savedOutput = 0.0;
+
+	ParamBand_Array savedBand1_Array = { 0.0, };
+	ParamBand_Array savedBand2_Array = { 0.0, };
+	ParamBand_Array savedBand3_Array = { 0.0, };
+	ParamBand_Array savedBand4_Array = { 0.0, };
+	ParamBand_Array savedBand5_Array = { 0.0, };
+
+	if (streamer.readDouble(savedZoom  ) == false) return kResultFalse;
+	if (streamer.readDouble(savedLevel ) == false) return kResultFalse;
+	if (streamer.readDouble(savedOutput) == false) return kResultFalse;
+
+	if (streamer.readDoubleArray(savedBand1_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand2_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand3_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand4_Array, ParamArray_size) == false) return kResultFalse;
+	if (streamer.readDoubleArray(savedBand5_Array, ParamArray_size) == false) return kResultFalse;
+
+	setParamNormalized(kParamZoom,   savedZoom);
+	setParamNormalized(kParamLevel,  savedLevel);
+	setParamNormalized(kParamOutput, savedOutput);
+
+	setParamNormalized(kParamBand1_In, savedBand1_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand2_In, savedBand2_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand3_In, savedBand3_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand4_In, savedBand4_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand5_In, savedBand5_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand1_Hz, savedBand1_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand2_Hz, savedBand2_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand1_Q, savedBand1_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand2_Q, savedBand2_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand3_Q, savedBand3_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand4_Q, savedBand4_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand5_Q, savedBand5_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand1_Type, savedBand1_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand2_Type, savedBand2_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand3_Type, savedBand3_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand4_Type, savedBand4_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand5_Type, savedBand5_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
+
+#define Arrcpy(dst, src) \
+	dst[ParamArray_In]    = src[ParamArray_In];   \
+	dst[ParamArray_Hz]    = src[ParamArray_Hz];   \
+	dst[ParamArray_Q]     = src[ParamArray_Q];    \
+	dst[ParamArray_dB]    = src[ParamArray_dB];   \
+	dst[ParamArray_Type]  = src[ParamArray_Type]; \
+	dst[ParamArray_Order] = src[ParamArray_Order]; 
+
+	fZoom   = savedZoom;
+	fLevel  = savedLevel;
+	fOutput = savedOutput;
+
+	Arrcpy(fParamBand1_Array, savedBand1_Array)
+	Arrcpy(fParamBand2_Array, savedBand2_Array)
+	Arrcpy(fParamBand3_Array, savedBand3_Array)
+	Arrcpy(fParamBand4_Array, savedBand4_Array)
+	Arrcpy(fParamBand5_Array, savedBand5_Array)
+
 	return kResultTrue;
 }
 
@@ -1480,6 +1578,18 @@ tresult PLUGIN_API RFEQ_Controller::getState (IBStream* state)
 	if (streamer.writeRaw (defaultMessageText, 128 * sizeof (TChar)) == false)
 		return kResultFalse;
 	*/
+
+	IBStreamer streamer(state, kLittleEndian);
+
+	streamer.writeDouble(fZoom);
+	streamer.writeDouble(fLevel);
+	streamer.writeDouble(fOutput);
+
+	streamer.writeDoubleArray(fParamBand1_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand2_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand3_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand4_Array, ParamArray_size);
+	streamer.writeDoubleArray(fParamBand5_Array, ParamArray_size);
 
 	return kResultTrue;
 }

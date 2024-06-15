@@ -171,10 +171,13 @@ tresult PLUGIN_API RFEQ_Processor::disconnect(Vst::IConnectionPoint* other)
 tresult PLUGIN_API RFEQ_Processor::setActive (TBool state)
 {
 	//--- called when the Plug-in is enable/disable (On/Off) -----
-	if (state)
-		dataExchange->onActivate(processSetup);
-	else
-		dataExchange->onDeactivate();
+	if (dataExchange)
+	{
+		if (state)
+			dataExchange->onActivate(processSetup);
+		else
+			dataExchange->onDeactivate();
+	}
 
 	return AudioEffect::setActive (state);
 }

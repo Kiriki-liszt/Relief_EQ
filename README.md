@@ -185,6 +185,20 @@ These choices in filter design and UI will guide a specific way of using an EQ, 
 The FFT in this plugin uses Kaiser Bessel windowing, RMS in frequency magnitudes, and no bands-per-oct smoothing.  
 Also, it runs in 4096 sample size.  
 
+## What I've learned  
+
+### AUv2 and FL studio  
+
+They call Controller state after Processer, overwriting states to default.  
+Always save Contoller state too, but not bypass state.  
+
+### Data Exchange  
+
+Ableton calls setActive before connect/disconnect happens.  
+This causes dataExchange pointer to be null while active process, so check for that in setActive.  
+
+Also, Ableton passes Silence tag quite strongly, so call exchange data after silence is asserted(if you use data exchange for parameter to draw UI or STH).  
+
 ## Ref  
 
 <https://dafx14.fau.de/papers/dafx14_aaron_wishnick_time_varying_filters_for_.pdf>  

@@ -1396,19 +1396,36 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
 	setParamNormalized(kParamLevel,  savedLevel);
 	setParamNormalized(kParamOutput, savedOutput);
 
-#define setParamNormArray(Array) \
-	setParamNormalized(kParamBand1_In, Array[ParamArray_In] ? 1 : 0); \
-	setParamNormalized(kParamBand1_Hz, Array[ParamArray_Hz]); \
-	setParamNormalized(kParamBand1_Q, Array[ParamArray_Q]); \
-	setParamNormalized(kParamBand1_dB, Array[ParamArray_dB]); \
-	setParamNormalized(kParamBand1_Type, Array[ParamArray_Type]); \
-	setParamNormalized(kParamBand1_Order, Array[ParamArray_Order]);
-
-	setParamNormArray(savedBand1_Array)
-	setParamNormArray(savedBand2_Array)
-	setParamNormArray(savedBand3_Array)
-	setParamNormArray(savedBand4_Array)
-	setParamNormArray(savedBand5_Array)
+	setParamNormalized(kParamBand1_In, savedBand1_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand2_In, savedBand2_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand3_In, savedBand3_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand4_In, savedBand4_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand5_In, savedBand5_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand1_Hz, savedBand1_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand2_Hz, savedBand2_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand1_Q,  savedBand1_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand2_Q,  savedBand2_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand3_Q,  savedBand3_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand4_Q,  savedBand4_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand5_Q,  savedBand5_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand1_Type,  savedBand1_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand2_Type,  savedBand2_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand3_Type,  savedBand3_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand4_Type,  savedBand4_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand5_Type,  savedBand5_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
 
 #define Arrcpy(dst, src) \
 	dst[ParamArray_In]    = src[ParamArray_In];   \
@@ -1489,19 +1506,36 @@ tresult PLUGIN_API RFEQ_Controller::setState (IBStream* state)
 	setParamNormalized(kParamLevel,  savedLevel);
 	setParamNormalized(kParamOutput, savedOutput);
 
-#define setParamNormArray(Array) \
-	setParamNormalized(kParamBand1_In, Array[ParamArray_In] ? 1 : 0); \
-	setParamNormalized(kParamBand1_Hz, Array[ParamArray_Hz]); \
-	setParamNormalized(kParamBand1_Q, Array[ParamArray_Q]); \
-	setParamNormalized(kParamBand1_dB, Array[ParamArray_dB]); \
-	setParamNormalized(kParamBand1_Type, Array[ParamArray_Type]); \
-	setParamNormalized(kParamBand1_Order, Array[ParamArray_Order]);
-
-	setParamNormArray(savedBand1_Array)
-	setParamNormArray(savedBand2_Array)
-	setParamNormArray(savedBand3_Array)
-	setParamNormArray(savedBand4_Array)
-	setParamNormArray(savedBand5_Array)
+	setParamNormalized(kParamBand1_In, savedBand1_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand2_In, savedBand2_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand3_In, savedBand3_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand4_In, savedBand4_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand5_In, savedBand5_Array[ParamArray_In] ? 1 : 0);
+	setParamNormalized(kParamBand1_Hz, savedBand1_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand2_Hz, savedBand2_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
+	setParamNormalized(kParamBand1_Q, savedBand1_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand2_Q, savedBand2_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand3_Q, savedBand3_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand4_Q, savedBand4_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand5_Q, savedBand5_Array[ParamArray_Q]);
+	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
+	setParamNormalized(kParamBand1_Type, savedBand1_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand2_Type, savedBand2_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand3_Type, savedBand3_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand4_Type, savedBand4_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand5_Type, savedBand5_Array[ParamArray_Type]);
+	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
+	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
 
 #define Arrcpy(dst, src) \
 	dst[ParamArray_In]    = src[ParamArray_In];   \
@@ -1547,23 +1581,24 @@ tresult PLUGIN_API RFEQ_Controller::getState (IBStream* state)
 
 	IBStreamer streamer(state, kLittleEndian);
 
-#define getParamNormArray(Array) \
-	Array[ParamArray_In] = getParamNormalized(kParamBand1_In); \
-	Array[ParamArray_Hz] = getParamNormalized(kParamBand1_Hz); \
-	Array[ParamArray_Q] = getParamNormalized(kParamBand1_Q); \
-	Array[ParamArray_dB] = getParamNormalized(kParamBand1_dB); \
-	Array[ParamArray_Type] = getParamNormalized(kParamBand1_Type); \
-	Array[ParamArray_Order] = getParamNormalized(kParamBand1_Order);
-
-	getParamNormArray(fParamBand1_Array)
-	getParamNormArray(fParamBand2_Array)
-	getParamNormArray(fParamBand3_Array)
-	getParamNormArray(fParamBand4_Array)
-	getParamNormArray(fParamBand5_Array)
-
 	fZoom = getParamNormalized(kParamZoom);
 	fLevel = getParamNormalized(kParamLevel);
 	fOutput = getParamNormalized(kParamOutput);
+
+#define getParamNormArray(Array, num) \
+	Array[ParamArray_In] = getParamNormalized(kParamBand1_In + (num - 1)); \
+	Array[ParamArray_Hz] = getParamNormalized(kParamBand1_Hz + (num - 1)); \
+	Array[ParamArray_Q] = getParamNormalized(kParamBand1_Q + (num - 1)); \
+	Array[ParamArray_dB] = getParamNormalized(kParamBand1_dB + (num - 1)); \
+	Array[ParamArray_Type] = getParamNormalized(kParamBand1_Type + (num - 1)); \
+	Array[ParamArray_Order] = getParamNormalized(kParamBand1_Order + (num - 1)); 
+
+	getParamNormArray(fParamBand1_Array, 1)
+	getParamNormArray(fParamBand2_Array, 2)
+	getParamNormArray(fParamBand3_Array, 3)
+	getParamNormArray(fParamBand4_Array, 4)
+	getParamNormArray(fParamBand5_Array, 5)
+
 
 	streamer.writeDouble(fZoom);
 	streamer.writeDouble(fLevel);

@@ -477,11 +477,14 @@ namespace VSTGUI {
 #define safe_bin(bin, x)   std::max(std::min((int)bin  + (int)x, (int)numBins   - 1) , 0)
 #define safe_band(band, x) std::max(std::min((int)band + (int)x, (int)MAX_BANDS - 1) , 0)
 
-	void EQCurveView::setFFTArray(float* array, double sampleRate)
+	void EQCurveView::setFFTArray(float* array, int sampleBlockSize, double sampleRate)
 	{
 		// Unit frequency per bin, with sample rate
 		double freqBin_width = sampleRate / fftSize;
-		double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
+		FDebugPrint("sampleBlockSize = %d \n", sampleBlockSize);
+		double _SR = sampleRate / (double)sampleBlockSize;
+		double coeff = exp(-1.0 / (0.1 * _SR));
+		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
 		double icoef = 1.0 - coeff;
 
 		for (int i = 0; i < numBins; ++i) {
@@ -1391,41 +1394,24 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
 	if (streamer.readDoubleArray(savedBand4_Array, ParamArray_size) == false) return kResultFalse;
 	if (streamer.readDoubleArray(savedBand5_Array, ParamArray_size) == false) return kResultFalse;
 
+#define getParamNormArray(Array, num) \
+	setParamNormalized(kParamBand1_In    + (num - 1), Array[ParamArray_In] ? 1 : 0); \
+	setParamNormalized(kParamBand1_Hz    + (num - 1), Array[ParamArray_Hz]); \
+	setParamNormalized(kParamBand1_Q     + (num - 1), Array[ParamArray_Q]); \
+	setParamNormalized(kParamBand1_dB    + (num - 1), Array[ParamArray_dB]); \
+	setParamNormalized(kParamBand1_Type  + (num - 1), Array[ParamArray_Type]); \
+	setParamNormalized(kParamBand1_Order + (num - 1), Array[ParamArray_Order]); 
+
 	setParamNormalized(kParamBypass, savedBypass ? 1 : 0);
-	setParamNormalized(kParamZoom,   savedZoom);
-	setParamNormalized(kParamLevel,  savedLevel);
+	setParamNormalized(kParamZoom, savedZoom);
+	setParamNormalized(kParamLevel, savedLevel);
 	setParamNormalized(kParamOutput, savedOutput);
 
-	setParamNormalized(kParamBand1_In, savedBand1_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand2_In, savedBand2_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand3_In, savedBand3_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand4_In, savedBand4_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand5_In, savedBand5_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand1_Hz, savedBand1_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand2_Hz, savedBand2_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand1_Q,  savedBand1_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand2_Q,  savedBand2_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand3_Q,  savedBand3_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand4_Q,  savedBand4_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand5_Q,  savedBand5_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand1_Type,  savedBand1_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand2_Type,  savedBand2_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand3_Type,  savedBand3_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand4_Type,  savedBand4_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand5_Type,  savedBand5_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
+	getParamNormArray(savedBand1_Array, 1)
+	getParamNormArray(savedBand2_Array, 2)
+	getParamNormArray(savedBand3_Array, 3)
+	getParamNormArray(savedBand4_Array, 4)
+	getParamNormArray(savedBand5_Array, 5)
 
 #define Arrcpy(dst, src) \
 	dst[ParamArray_In]    = src[ParamArray_In];   \
@@ -1452,30 +1438,7 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Controller::setState (IBStream* state)
 {
-	/*
 	// Here you get the state of the controller
-	
-	IBStreamer streamer(state, kLittleEndian);
-
-	int8 byteOrder;
-	if (streamer.readInt8(byteOrder) == false)
-		return kResultFalse;
-	if (streamer.readRaw(defaultMessageText, 128 * sizeof(TChar)) == false)
-		return kResultFalse;
-
-	// if the byteorder doesn't match, byte swap the text array ...
-	if (byteOrder != BYTEORDER)
-	{
-		for (int32 i = 0; i < 128; i++)
-		{
-			SWAP_16(defaultMessageText[i])
-		}
-	}
-
-	// update our editors
-	for (auto& uiMessageController : uiMessageControllers)
-		uiMessageController->setMessageText(defaultMessageText);
-	*/
 
 	if (!state)
 		return kResultFalse;
@@ -1502,40 +1465,23 @@ tresult PLUGIN_API RFEQ_Controller::setState (IBStream* state)
 	if (streamer.readDoubleArray(savedBand4_Array, ParamArray_size) == false) return kResultFalse;
 	if (streamer.readDoubleArray(savedBand5_Array, ParamArray_size) == false) return kResultFalse;
 
+#define getParamNormArray(Array, num) \
+	setParamNormalized(kParamBand1_In    + (num - 1), Array[ParamArray_In] ? 1 : 0); \
+	setParamNormalized(kParamBand1_Hz    + (num - 1), Array[ParamArray_Hz]); \
+	setParamNormalized(kParamBand1_Q     + (num - 1), Array[ParamArray_Q]); \
+	setParamNormalized(kParamBand1_dB    + (num - 1), Array[ParamArray_dB]); \
+	setParamNormalized(kParamBand1_Type  + (num - 1), Array[ParamArray_Type]); \
+	setParamNormalized(kParamBand1_Order + (num - 1), Array[ParamArray_Order]); 
+
 	setParamNormalized(kParamZoom,   savedZoom);
 	setParamNormalized(kParamLevel,  savedLevel);
 	setParamNormalized(kParamOutput, savedOutput);
 
-	setParamNormalized(kParamBand1_In, savedBand1_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand2_In, savedBand2_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand3_In, savedBand3_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand4_In, savedBand4_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand5_In, savedBand5_Array[ParamArray_In] ? 1 : 0);
-	setParamNormalized(kParamBand1_Hz, savedBand1_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand2_Hz, savedBand2_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand3_Hz, savedBand3_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand4_Hz, savedBand4_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand5_Hz, savedBand5_Array[ParamArray_Hz]);
-	setParamNormalized(kParamBand1_Q, savedBand1_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand2_Q, savedBand2_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand3_Q, savedBand3_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand4_Q, savedBand4_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand5_Q, savedBand5_Array[ParamArray_Q]);
-	setParamNormalized(kParamBand1_dB, savedBand1_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand2_dB, savedBand2_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand3_dB, savedBand3_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand4_dB, savedBand4_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand5_dB, savedBand5_Array[ParamArray_dB]);
-	setParamNormalized(kParamBand1_Type, savedBand1_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand2_Type, savedBand2_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand3_Type, savedBand3_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand4_Type, savedBand4_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand5_Type, savedBand5_Array[ParamArray_Type]);
-	setParamNormalized(kParamBand1_Order, savedBand1_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand2_Order, savedBand2_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand3_Order, savedBand3_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand4_Order, savedBand4_Array[ParamArray_Order]);
-	setParamNormalized(kParamBand5_Order, savedBand5_Array[ParamArray_Order]);
+	getParamNormArray(savedBand1_Array, 1)
+	getParamNormArray(savedBand2_Array, 2)
+	getParamNormArray(savedBand3_Array, 3)
+	getParamNormArray(savedBand4_Array, 4)
+	getParamNormArray(savedBand5_Array, 5)
 
 #define Arrcpy(dst, src) \
 	dst[ParamArray_In]    = src[ParamArray_In];   \
@@ -1564,33 +1510,18 @@ tresult PLUGIN_API RFEQ_Controller::getState (IBStream* state)
 	// Here you are asked to deliver the state of the controller (if needed)
 	// Note: the real state of your plug-in is saved in the processor
 
-	/*
-	// here we can save UI settings for example
-
-	// as we save a Unicode string, we must know the byteorder when setState is called
-
-	IBStreamer streamer (state, kLittleEndian);
-
-	int8 byteOrder = BYTEORDER;
-	if (streamer.writeInt8 (byteOrder) == false)
-		return kResultFalse;
-
-	if (streamer.writeRaw (defaultMessageText, 128 * sizeof (TChar)) == false)
-		return kResultFalse;
-	*/
-
 	IBStreamer streamer(state, kLittleEndian);
 
-	fZoom = getParamNormalized(kParamZoom);
-	fLevel = getParamNormalized(kParamLevel);
+	fZoom   = getParamNormalized(kParamZoom);
+	fLevel  = getParamNormalized(kParamLevel);
 	fOutput = getParamNormalized(kParamOutput);
 
 #define getParamNormArray(Array, num) \
-	Array[ParamArray_In] = getParamNormalized(kParamBand1_In + (num - 1)); \
-	Array[ParamArray_Hz] = getParamNormalized(kParamBand1_Hz + (num - 1)); \
-	Array[ParamArray_Q] = getParamNormalized(kParamBand1_Q + (num - 1)); \
-	Array[ParamArray_dB] = getParamNormalized(kParamBand1_dB + (num - 1)); \
-	Array[ParamArray_Type] = getParamNormalized(kParamBand1_Type + (num - 1)); \
+	Array[ParamArray_In]    = getParamNormalized(kParamBand1_In    + (num - 1)); \
+	Array[ParamArray_Hz]    = getParamNormalized(kParamBand1_Hz    + (num - 1)); \
+	Array[ParamArray_Q]     = getParamNormalized(kParamBand1_Q     + (num - 1)); \
+	Array[ParamArray_dB]    = getParamNormalized(kParamBand1_dB    + (num - 1)); \
+	Array[ParamArray_Type]  = getParamNormalized(kParamBand1_Type  + (num - 1)); \
 	Array[ParamArray_Order] = getParamNormalized(kParamBand1_Order + (num - 1)); 
 
 	getParamNormArray(fParamBand1_Array, 1)
@@ -1750,36 +1681,11 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 	{
 		auto dataBlock = toDataBlock(blocks[index]);
 
-		/*
-		ParamBand_Array band1, band2, band3, band4, band5;
-		float buff[_numBins] = { 0.0, };
-		double getSampleRate, currFs, bBypass, level;
-		paramBand_array_copy(band1, dataBlock->Band1);
-		paramBand_array_copy(band2, dataBlock->Band2);
-		paramBand_array_copy(band3, dataBlock->Band3);
-		paramBand_array_copy(band4, dataBlock->Band4);
-		paramBand_array_copy(band5, dataBlock->Band5);
-		for (int i = 0; i < _numBins; i++) buff[i] = dataBlock->samples[i];
-		// memcpy(buff, dataBlock->samples, _numBins * sizeof(float));
-		getSampleRate = dataBlock->sampleRate;
-		level = dataBlock->level;
-		currFs = dataBlock->Fs;
-		bBypass = dataBlock->byPass;
-		*/
-
-		if (!curveControllers.empty()) {
-			for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++) {
-				/*
-				(*iter)->setFFTArray(buff, getSampleRate);
-				(*iter)->setLevel(level);
-				(*iter)->setBandArray(band1, currFs, bBypass, 1);
-				(*iter)->setBandArray(band2, currFs, bBypass, 2);
-				(*iter)->setBandArray(band3, currFs, bBypass, 3);
-				(*iter)->setBandArray(band4, currFs, bBypass, 4);
-				(*iter)->setBandArray(band5, currFs, bBypass, 5);
-				*/
-
-				(*iter)->setFFTArray(dataBlock->samples, dataBlock->sampleRate);
+		if (!curveControllers.empty()) 
+		{
+			for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++) 
+			{
+				(*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->sampleRate);
 				(*iter)->setLevel(dataBlock->level);
 				(*iter)->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
 				(*iter)->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);

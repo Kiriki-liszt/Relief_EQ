@@ -331,6 +331,7 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
 		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
 		block->sampleRate = getSampleRate;
+		block->numSamples = data.numSamples;
 		block->Fs = OS_target;
 		block->byPass = bBypass;
 		block->level = fLevel;

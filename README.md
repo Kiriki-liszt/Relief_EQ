@@ -28,7 +28,7 @@ Unzip Win.zip from latest release and copy to "C:\Program Files\Common Files\VST
 Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VST3" and component to "/Library/Audio/Plug-Ins/Components".  
 
 > If it doesn't go well, configure security options in console as  
->  
+>
 > ``` console  
 > sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/VST3/Relief_EQ.vst3  
 > sudo xattr -r -d com.apple.quarantine /Library/Audio/Plug-Ins/Components/Relief_EQ.component
@@ -36,7 +36,7 @@ Unzip MacOS.zip from latest release and copy vst3 to "/Library/Audio/Plug-Ins/VS
 > sudo codesign --force --sign - /Library/Audio/Plug-Ins/VST3/Relief_EQ.vst3  
 > sudo codesign --force --sign - /Library/Audio/Plug-Ins/Components/Relief_EQ.component
 > ```  
->  
+>
 > tested by @jonasborneland [here](https://github.com/Kiriki-liszt/JS_Inflator_to_VST2_VST3/issues/12#issuecomment-1616671177)
 
 ## Licensing  
@@ -47,9 +47,9 @@ Relief EQ is using GPL v3 license.
 
 > Q: I would like to share the source code of my VST 3 plug-in/host on GitHub or other such platform.  
 >
-> * You can choose the GPLv3 license and feel free to share your plug-ins/host's source code including or referencing the VST 3 SDK's sources on GitHub.  
-> * **You are allowed to provide a binary form of your plug-ins/host too, provided that you provide its source code as GPLv3 too.**  
-> * Note that you have to follow the Steinberg VST usage guidelines.  
+> - You can choose the GPLv3 license and feel free to share your plug-ins/host's source code including or referencing the VST 3 SDK's sources on GitHub.  
+> - **You are allowed to provide a binary form of your plug-ins/host too, provided that you provide its source code as GPLv3 too.**  
+> - Note that you have to follow the Steinberg VST usage guidelines.  
 >  
 > <https://steinbergmedia.github.io/vst3_dev_portal/pages/FAQ/Licensing.html>  
 
@@ -60,7 +60,7 @@ VSTGUI 4.12 used
 
 ### PFFFT  
 
-PFFFT is work of Julien Pommier, with Copyright (c) 2013  Julien Pommier ( pommier@modartt.com )  
+PFFFT is work of Julien Pommier, with Copyright (c) 2013  Julien Pommier ( <pommier@modartt.com> )  
 It is under BSD-Like, and license is in the header at RFEQ_fft.h.  
 
 ### C++ Wrapper for pffft  
@@ -81,8 +81,10 @@ v1.0.0 : Official release.  Changed shelf arch.
 v1.1.0 : FFT analyzer added.  
 v1.1.1 : Crash after closing the plugin window fixed.  
 v1.1.2 :
-* Processor - data exchange check at setActive(Ableton crash).  
-* Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).  
+
+- Processor - data exchange check at setActive(Ableton crash).  
+
+- Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).  
 
 ## How it started
 
@@ -99,14 +101,14 @@ It took a long path to do all researches of EQs and compare them.
 
 Doing some research, there was many things that makes EQ sound different.  
 
-* Archiecture of filter implementaion
-* Bit depth
-* Cramping and De-cramping methods
-* Oversampling
-* Serial and Parallel topology
-* Gain - Q dependency
-* Q range and UI/UX
-* Shelf definition(frequency point, filter order, symmetrical or asymmetrical)
+- Archiecture of filter implementaion
+- Bit depth
+- Cramping and De-cramping methods
+- Oversampling
+- Serial and Parallel topology
+- Gain - Q dependency
+- Q range and UI/UX
+- Shelf definition(frequency point, filter order, symmetrical or asymmetrical)
 
 Finally, I made a conclusion in these lines;  
 
@@ -118,9 +120,9 @@ Finally, I made a conclusion in these lines;
 
 There are many papers and researches made about Archiecture of filters, in aspects of some points;  
 
-* stability
-* rounding error causing noise
-* transients
+- stability
+- rounding error causing noise
+- transients
 
 Long story short, a 64bit processing SVF architecture is best all-around fit.  
 It's stable, robust in math, and handles transients well.  

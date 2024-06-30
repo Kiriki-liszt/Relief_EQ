@@ -125,7 +125,7 @@ public:
 	};
 
 	typedef struct ds{
-		int    In = 1;
+		int    In = 0;
 		double dB = 0.0;
 		double Hz = 1000.0;
 		double Q = 1.0;

@@ -157,27 +157,13 @@ namespace VSTGUI {
 		static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
 
 		float fft_linear[numBins] = { 0.0 };
-		float fft_RMS[numBins] = { 0.0 };
-		float fft_freq[numBins] = { 0.0 };
-
-		/*
-		// 11 octs, 12 per oct = 132 bands max.
-#define MAX_BANDS 132
-#define INTERVAL 12
-		float bandsCenter[MAX_BANDS] = { 0.0, };
-		float bandsLower[MAX_BANDS] = { 0.0, };
-		float bandsUpper[MAX_BANDS] = { 0.0, };
-		float bandsOutput[MAX_BANDS] = { 0.0, };
-		*/
+		float fft_RMS[numBins]    = { 0.0 };
+		float fft_freq[numBins]   = { 0.0 };
 	};
 }
 
 
 namespace yg331 {
-
-
-
-
 //------------------------------------------------------------------------
 // EQCurveViewController
 //------------------------------------------------------------------------
@@ -222,11 +208,11 @@ public:
 	};
 
 private:
-	using CControl = VSTGUI::CControl;
-	using CView = VSTGUI::CView;
-	using EQCurveView = VSTGUI::EQCurveView;
-	using UTF8String = VSTGUI::UTF8String;
-	using UIAttributes = VSTGUI::UIAttributes;
+	using CControl       = VSTGUI::CControl;
+	using CView          = VSTGUI::CView;
+	using EQCurveView    = VSTGUI::EQCurveView;
+	using UTF8String     = VSTGUI::UTF8String;
+	using UIAttributes   = VSTGUI::UIAttributes;
 	using IUIDescription = VSTGUI::IUIDescription;
 
 	/*

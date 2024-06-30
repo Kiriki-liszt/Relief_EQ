@@ -586,7 +586,7 @@ namespace VSTGUI {
             y_start = (std::max)((std::min)(y_start, 1.0), 0.0);
             y_start *= r.getHeight();
 			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y_start));
-
+			double x_last = 0.0;
 			// RAW
 			for (int bin = 0; bin < numBins; ++bin) {
 				double x = freq_to_x(r, fft_freq[bin]);
@@ -594,55 +594,12 @@ namespace VSTGUI {
 				double y = mag_to_01(fft_linear[bin]);
 				y = (std::max)((std::min)(y, 1.0), 0.0);
 				y *= r.getHeight();
-
-				FFT_curve->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
-			}
-
-			/*
-			// 1/12 oct, as is
-			for (int band = 0; band < MAX_BANDS; band++) {
-				double x = freq_to_x(r, bandsCenter[band]);
-				x = (std::max)((std::min)(x, r.getWidth()), 0.0);
-				double y = mag_to_01(bandsOutput[band]);
-				y = (std::max)((std::min)(y, 1.0), 0.0);
-				y *= r.getHeight();
-
-				path->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
-			}
-			*/
-
-			/*
-			// 1/12, interpolated after
-			for (int band = 0; band < MAX_BANDS; band++) {
-				float xA = bandsCenter[safe_band(band, -1)];
-				float xB = bandsCenter[safe_band(band, 0)];
-				float xC = bandsCenter[safe_band(band, +1)];
-				float xD = bandsCenter[safe_band(band, +2)];
-
-				float yA = bandsOutput[safe_band(band, -1)];
-				float yB = bandsOutput[safe_band(band, 0)];
-				float yC = bandsOutput[safe_band(band, +1)];
-				float yD = bandsOutput[safe_band(band, +2)];
-
-				static constexpr int resolution = 5;
-				for (int i = 0; i < resolution; i++) {
-					double t = (double)i / resolution;
-					//double dx = lanczos_interpolation(xA, xB, xC, xD, t);
-					double dx = cubic_hermite(xA, xB, xC, xD, t);
-
-					//double dy = lanczos_interpolation(yA, yB, yC, yD, t);
-					double dy = cubic_hermite(yA, yB, yC, yD, t);
-					dy = (std::max)(dy, 0.0);
-					double x = freq_to_x(r, dx);
-					x = (std::max)((std::min)(x, r.getWidth()), 0.0);
-					double y = mag_to_01(dy);
-					y = (std::max)((std::min)(y, 1.0), 0.0);
-					y *= r.getHeight();
-
-					path->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
+				if (x - x_last > 0.1)
+				{
+					x_last = x;
+					FFT_curve->addLine(VSTGUI::CPoint(r.left + x, r.bottom - y));
 				}
 			}
-			*/
 
 			FFT_curve->addLine(VSTGUI::CPoint(r.right + 1, r.bottom + 1));
 			FFT_curve->addLine(VSTGUI::CPoint(r.left - 1, r.bottom + 1));
@@ -1460,6 +1417,7 @@ IPlugView* PLUGIN_API RFEQ_Controller::createView (FIDString name)
 		// create your editor here and return a IPlugView ptr of it
 		auto* view = new VSTGUI::VST3Editor (this, "view", "RFEQ_editor.uidesc");
 		view->setZoomFactor(1.0);
+		view->setIdleRate(1.0 / 60.0);
 		setKnobMode(Steinberg::Vst::KnobModes::kLinearMode);
 		main_editor = view;
 		return view;

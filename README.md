@@ -88,7 +88,7 @@ v1.1.2 :
 - Processor - data exchange check at setActive(Ableton crash).  
 - Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).
 
-v1.1.3 : FFT graph more consistant over block size change.  
+v1.1.3 : FFT graph more consistent over block size change.  
 
 ## How it started
 

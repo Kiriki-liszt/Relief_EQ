@@ -189,11 +189,33 @@ protected:
 	// FFT
 
 	FFTProcessor FFT;
-	alignas(16) std::vector<float> fft_in = { 0.0, };  // size = maxSamples
+	alignas(16) std::vector<float> fft_in  = { 0.0, }; // size = maxSamples
 	alignas(16) std::vector<float> fft_fps = { 0.0, }; // size = samples_per_block
     alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
 	static constexpr int update_rate = 60;
 	int sample_cnt = 0, pos = 0;
+
+	float fft_linear[_numBins] = { 0.0 };
+	float fft_RMS[_numBins] = { 0.0 };
+	float fft_freq[_numBins] = { 0.0 };
+
+	void setFFTArray(float* array, int sampleBlockSize, double sampleRate)
+	{
+		double freqBin_width = sampleRate / _fftSize;
+		double _SR = sampleRate / (double)sampleBlockSize;
+		double coeff = exp(-1.0 / (0.1 * _SR));
+		// 1 / sampleRate = time per sample
+		// we need : time per each function call
+		// 
+		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
+		double icoef = 1.0 - coeff;
+
+		for (int i = 0; i < _numBins; ++i) {
+			fft_RMS[i]    = (fft_RMS[i] * coeff) + (icoef * array[i] * array[i]);
+			fft_linear[i] = std::sqrt(fft_RMS[i]);
+			fft_freq[i]   = (i + 0.5) * freqBin_width;
+		}
+	}
 };
 
 //------------------------------------------------------------------------

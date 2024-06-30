@@ -390,12 +390,17 @@ namespace yg331 {
         float processSample(float sample, bool bypassed);
         void processBlock(float* data, int numSamples, bool bypassed);
         void processBlock(double* data, int numSamples, bool bypassed);
-        void getData(float* out) {
+        int getData(float* out) {
+            if (!data_avail)
+                return 0;
+
             auto* cdata = reinterpret_cast<std::complex<float>*>(&fftData);
             for (int i = 0; i < numBins; ++i) {
                 float magnitude = std::abs(cdata[i]);
                 out[i] = magnitude;
             }
+            data_avail = 0;
+            return 1;
         };
         static void hannWindow(float* window, int length)
         {
@@ -492,6 +497,8 @@ namespace yg331 {
 
         // Counts up until the next hop.
         int count = 0;
+
+        int data_avail = 0;
 
         // Write position in input FIFO and read position in output FIFO.
         int pos = 0;

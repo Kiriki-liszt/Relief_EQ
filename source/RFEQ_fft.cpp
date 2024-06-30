@@ -1958,6 +1958,7 @@ namespace yg331 {
         count += 1;
         if (count == hopSize) {
             count = 0;
+            data_avail = 1;
             processFrame(bypassed);
         }
 

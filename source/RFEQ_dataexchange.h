@@ -25,13 +25,14 @@ namespace yg331 {
 		ParamBand_Array Band3;
 		ParamBand_Array Band4;
 		ParamBand_Array Band5;
-		SampleRate Fs; // SVF filter sample rate, oversampled
-		TBool byPass;
-		ParamValue level;
+		SampleRate filterSampleRate;
+		TBool      filterBypass;
+		ParamValue filterLevel;
 
-		SampleRate sampleRate; // FFT sample rate
-		uint32 numSamples;
-		float samples[0];
+		SampleRate FFTSampleRate;
+		uint32     FFTDataAvail;
+		uint32     numSamples;
+		float      samples[0];
 	};
 
 	//------------------------------------------------------------------------

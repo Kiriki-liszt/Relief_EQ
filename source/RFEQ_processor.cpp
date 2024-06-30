@@ -195,11 +195,12 @@ void RFEQ_Processor::acquireNewExchangeBlock()
 		memset(block->Band4, 0, sizeof(ParamBand_Array));
 		memset(block->Band5, 0, sizeof(ParamBand_Array));
 
-		block->Fs = 0.0;
-		block->byPass = 0;
-		block->level = 0.0;
+		block->filterSampleRate = static_cast<uint32_t> (processSetup.sampleRate);
+		block->filterBypass = 0;
+		block->filterLevel = 0.0;
 
-		block->sampleRate = static_cast<uint32_t> (processSetup.sampleRate);
+		block->FFTSampleRate = static_cast<uint32_t> (processSetup.sampleRate);
+		block->FFTDataAvail = 0;
 	}
 }
 
@@ -319,6 +320,8 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		}
 	}
 
+	int data_avail = FFT.getData(fft_out.data());
+
 	//--- send data ----------------
 	if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
 		acquireNewExchangeBlock();
@@ -330,11 +333,12 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 		memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
 		memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
 		memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
-		block->sampleRate = getSampleRate;
+		block->FFTSampleRate = getSampleRate;
+		block->FFTDataAvail = data_avail;
 		block->numSamples = data.numSamples;
-		block->Fs = OS_target;
-		block->byPass = bBypass;
-		block->level = fLevel;
+		block->filterSampleRate = OS_target;
+		block->filterBypass = bBypass;
+		block->filterLevel = fLevel;
 		dataExchange->sendCurrentBlock();
 		acquireNewExchangeBlock();
 	}
@@ -590,55 +594,7 @@ void RFEQ_Processor::processSVF(
 		}
 	}
 
-
 	FFT.processBlock(fft_in.data(), sampleFrames, 0);
-	FFT.getData(fft_out.data());
-
-	
-
-	if(false){
-
-		int32 samples = sampleFrames;
-		float* fft_in_begin = fft_in.data();
-		while (--samples >= 0)
-		{
-			fft_fps.at(pos) = *fft_in_begin;
-			pos++;
-			fft_in_begin++;
-
-			if (pos >= sample_per_frame)
-			{
-				pos = 0;
-
-				FFT.processBlock(fft_fps.data(), sample_per_frame, 0);
-				FFT.getData(fft_out.data());
-
-				//--- send data ----------------
-				if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-					acquireNewExchangeBlock();
-                
-				if (auto block = toDataBlock(currentExchangeBlock))
-				{
-					memcpy(block->Band1, fParamBand1_Array, ParamArray::ParamArray_size * sizeof(double));
-					memcpy(block->Band2, fParamBand2_Array, ParamArray::ParamArray_size * sizeof(double));
-					memcpy(block->Band3, fParamBand3_Array, ParamArray::ParamArray_size * sizeof(double));
-					memcpy(block->Band4, fParamBand4_Array, ParamArray::ParamArray_size * sizeof(double));
-					memcpy(block->Band5, fParamBand5_Array, ParamArray::ParamArray_size * sizeof(double));
-					memcpy(&block->samples[0], fft_out.data(), _numBins * sizeof(float));
-					block->sampleRate = getSampleRate;
-					block->Fs = currFs;
-					block->byPass = bBypass;
-					block->level = fLevel;
-					dataExchange->sendCurrentBlock();
-					acquireNewExchangeBlock();
-                    
-                    block = toDataBlock (currentExchangeBlock);
-                                    if (block == nullptr)
-                                        break;
-				}
-			}
-		}
-	}
 
 	return;
 }

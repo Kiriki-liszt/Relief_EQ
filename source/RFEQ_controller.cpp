@@ -481,7 +481,7 @@ namespace VSTGUI {
 	{
 		// Unit frequency per bin, with sample rate
 		double freqBin_width = sampleRate / fftSize;
-		FDebugPrint("sampleBlockSize = %d \n", sampleBlockSize);
+		//FDebugPrint("sampleBlockSize = %d \n", sampleBlockSize);
 		double _SR = sampleRate / (double)sampleBlockSize;
 		double coeff = exp(-1.0 / (0.1 * _SR));
 		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
@@ -1685,13 +1685,13 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 		{
 			for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++) 
 			{
-				(*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->sampleRate);
-				(*iter)->setLevel(dataBlock->level);
-				(*iter)->setBandArray(dataBlock->Band1, dataBlock->Fs, dataBlock->byPass, 1);
-				(*iter)->setBandArray(dataBlock->Band2, dataBlock->Fs, dataBlock->byPass, 2);
-				(*iter)->setBandArray(dataBlock->Band3, dataBlock->Fs, dataBlock->byPass, 3);
-				(*iter)->setBandArray(dataBlock->Band4, dataBlock->Fs, dataBlock->byPass, 4);
-				(*iter)->setBandArray(dataBlock->Band5, dataBlock->Fs, dataBlock->byPass, 5);
+				if (dataBlock->FFTSampleRate) (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
+				(*iter)->setLevel(dataBlock->filterLevel);
+				(*iter)->setBandArray(dataBlock->Band1, dataBlock->filterSampleRate, dataBlock->filterBypass, 1);
+				(*iter)->setBandArray(dataBlock->Band2, dataBlock->filterSampleRate, dataBlock->filterBypass, 2);
+				(*iter)->setBandArray(dataBlock->Band3, dataBlock->filterSampleRate, dataBlock->filterBypass, 3);
+				(*iter)->setBandArray(dataBlock->Band4, dataBlock->filterSampleRate, dataBlock->filterBypass, 4);
+				(*iter)->setBandArray(dataBlock->Band5, dataBlock->filterSampleRate, dataBlock->filterBypass, 5);
 			}
 		}
 	}

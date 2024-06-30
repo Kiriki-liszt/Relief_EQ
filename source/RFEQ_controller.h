@@ -97,7 +97,6 @@ namespace VSTGUI {
 		EQCurveView(const CRect& size, IControlListener* listener, int32_t tag, CBitmap* background );
 		EQCurveView(const EQCurveView& v);
 
-		void setFracOct();
 		void setFFTArray(float* array, int sampleBlockSize, double sampleRate);
 		void setLevel(double level);
 		void setBandArray(double* array, double Fs, bool _byPass, int num);

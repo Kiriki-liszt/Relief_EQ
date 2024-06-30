@@ -444,20 +444,6 @@ namespace VSTGUI {
 		level = (24.0 * _level - 12.0);
 	}
 
-	void EQCurveView::setFracOct() {
-		/*
-		bandsCenter[0] = 20.0;
-		bandsLower[0] = bandsCenter[0] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
-		bandsUpper[0] = bandsCenter[0] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
-
-		for (int band = 1; band < MAX_BANDS; band++) {
-			bandsCenter[band] = bandsCenter[band - 1] * std::pow(10.0, (3.0 / (10.0 * INTERVAL)));
-			bandsLower[band] = bandsCenter[band] / std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
-			bandsUpper[band] = bandsCenter[band] * std::pow(10.0, (3.0 / (10.0 * 2.0 * INTERVAL)));
-		}
-		*/
-	}
-
 
 #define cubic_hermite(A, B, C, D, t) \
 		(/*a0*/(D - C - A + B) * t * t * t + /*a1*/(A - B - D + C + A - B) * t * t + /*a2*/(C - A) * t + /*a3*/(B) )
@@ -483,7 +469,7 @@ namespace VSTGUI {
 		double freqBin_width = sampleRate / fftSize;
 		//FDebugPrint("sampleBlockSize = %d \n", sampleBlockSize);
 		double _SR = sampleRate / (double)sampleBlockSize;
-		double coeff = exp(-1.0 / (0.1 * _SR));
+		double coeff = exp(-1.0 / (100.0 * 0.001 * _SR));
 		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
 		double icoef = 1.0 - coeff;
 
@@ -494,85 +480,6 @@ namespace VSTGUI {
 
 			fft_freq[i] = (i + 0.5) * freqBin_width;
 		}
-		// fft_linear[0] = 0.0;
-		//for (int i = 1; i < 10; i++) FDebugPrint("%f ", fft_linear[i]);
-		//FDebugPrint("\n");
-
-		/*
-		memset(bandsOutput, 0, sizeof(bandsOutput));
-
-		if (false) {
-			for (int band = 0, lower = 0, upper = 0; band < MAX_BANDS; band++)
-			{
-				double center = bandsCenter[band];
-
-				while ((center >= fft_freq[upper]) && (upper < numBins - 1)) {
-					upper++;
-				}
-				while ((fft_freq[lower + 1] <= center) && (lower + 1 < numBins - 1)) {
-					lower++;
-				}
-				// printf("lower = %d : %f | center = %d : %f | upper = %d : %f \n", lower, fft_freq[lower], band, center, upper, fft_freq[upper]);
-
-				// interpolate
-				float A = fft_linear[safe_bin(lower, -1)];
-				float B = fft_linear[safe_bin(lower, 0)];
-				float C = fft_linear[safe_bin(upper, 0)];
-				float D = fft_linear[safe_bin(upper, 1)];
-				float t = (bandsCenter[band] - fft_freq[lower]) / (fft_freq[upper] - fft_freq[lower]);
-				bandsOutput[band] = lanczos_interpolation(A, B, C, D, t);
-				// printf("Band center freq = %f, interpolated = %f\n", bandsCenter[band], bandsOutput[band]);
-
-			}
-		}
-
-		if (false) {
-			int bin = 1, band = 0;
-			int cnt = 0;
-			while ((bin < numBins) && (band < MAX_BANDS)) {
-
-				// 1 band, n bins
-				// Inside of band range
-				if ((bandsLower[band] <= fft_freq[bin]) && (fft_freq[bin] < bandsUpper[band]))
-				{
-					// add
-					bandsOutput[band] += fft_linear[(bin)];
-					cnt++;
-
-					// and if next bin is not in range
-					if ((bandsUpper[band] <= fft_freq[bin + 1]) || ((bin + 1 > numBins - 1) || (band > MAX_BANDS - 1)))
-					{
-						// then calc now
-						bandsOutput[band] /= cnt;
-
-						cnt = 0;
-						//bin++;
-						band++;
-					}
-
-					bin++;
-
-					continue;
-				}
-
-				// 1 bin, n bands
-				if ((fft_freq[safe_bin(bin, -1)] <= bandsLower[band]) && (bandsUpper[band] < fft_freq[safe_bin(bin, 1)]))
-				{
-					// interpolate
-					float A = fft_linear[safe_bin(bin, -2)];
-					float B = fft_linear[safe_bin(bin, -1)];
-					float C = fft_linear[safe_bin(bin, 0)];
-					float D = fft_linear[safe_bin(bin, 1)];
-					float t = (bandsCenter[band] - fft_freq[bin]) / (fft_freq[bin] - fft_freq[safe_bin(bin, 1)]);
-					bandsOutput[band] = lanczos_interpolation(D, C, B, A, t);
-					if (bandsOutput[band] < 0.0) bandsOutput[band] = 0.0;
-					band++;
-					continue;
-				}
-				bin++;
-			}
-		}
-		*/
 	}
 
 
@@ -1685,7 +1592,7 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 		{
 			for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++) 
 			{
-				if (dataBlock->FFTSampleRate) (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
+				if (dataBlock->FFTDataAvail) (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
 				(*iter)->setLevel(dataBlock->filterLevel);
 				(*iter)->setBandArray(dataBlock->Band1, dataBlock->filterSampleRate, dataBlock->filterBypass, 1);
 				(*iter)->setBandArray(dataBlock->Band2, dataBlock->filterSampleRate, dataBlock->filterBypass, 2);

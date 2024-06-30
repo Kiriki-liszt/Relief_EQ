@@ -7,6 +7,13 @@ At 44.1 kHz and 48 kHz sampling rates, it upsamples to 88.2 kHz or 96 kHz respec
 
 Windows and Mac, VST3 and AU.  
 
+[![GitHub Release](https://img.shields.io/github/v/release/kiriki-liszt/Relief_EQ?style=flat-square&label=Get%20latest%20Release)](https://github.com/Kiriki-liszt/Relief_EQ/releases/latest)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/kiriki-liszt/Relief_EQ/total?style=flat-square&label=total%20downloads&color=blue)](https://github.com/Kiriki-liszt/Relief_EQ/releases/latest)  
+
+[![Static Badge](https://img.shields.io/badge/coffee%20maybe%3F%20%3D%5D%20-gray?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/kirikiaris)  
+
+<img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
+
 ## Windows  
 
 - x64  
@@ -14,8 +21,6 @@ Windows and Mac, VST3 and AU.
 ## macOS  
 
 - 10.13(High Sierra) to 14.5(Sonoma)  
-
-<img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
 
 ## How to use  
 

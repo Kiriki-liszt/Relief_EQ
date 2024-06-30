@@ -81,10 +81,9 @@ v1.0.0 : Official release.  Changed shelf arch.
 v1.1.0 : FFT analyzer added.  
 v1.1.1 : Crash after closing the plugin window fixed.  
 v1.1.2 :
-
 - Processor - data exchange check at setActive(Ableton crash).  
-
-- Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).  
+- Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).
+v1.1.3 : FFT graph more consistant over block size change.  
 
 ## How it started
 

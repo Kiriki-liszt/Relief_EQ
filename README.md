@@ -216,7 +216,6 @@ Also, Ableton passes Silence tag quite strongly, so call exchange data after sil
 [Vicanek, Martin. Matched Second Order Digital Filters. (2016).](https://www.vicanek.de/articles/BiquadFits.pdf)  
 [John Flynn & Joshua D. Reiss (2018). Improving the frequency response magnitude and phase of analogue-matched digital filters](https://www.eecs.qmul.ac.uk/~josh/documents/2018/19412.pdf)  
 [D. W. Gunness, O. S. Chauhan, “Optimizing the Magnitude Response of Matched z-Transform Filters (“MZTi”) for Loudspeaker Equalization”](https://www.khabdha.org/wp-content/uploads/2008/03/optimizing-the-magnitude-response-of-mzt-filters-mzti-2007.pdf)  
-[https://www.fulcrum-acoustic.com/wp-content/uploads/2019/10/optimizing-the-magnitude-response-of-mzt-filters-2007.pdf](https://www.fulcrum-acoustic.com/wp-content/uploads/2019/10/optimizing-the-magnitude-response-of-mzt-filters-2007.pdf)  
 
 ## Ref  
 

@@ -212,6 +212,7 @@ Also, Ableton passes Silence tag quite strongly, so call exchange data after sil
 
 ## Further lookings  
 
+[https://gearspace.com/board/showpost.php?p=15864586&postcount=730](https://gearspace.com/board/showpost.php?p=15864586&postcount=730)  
 [John Flynn & Joshua D. Reiss (2018). Improving the frequency response magnitude and phase of analogue-matched digital filters](https://www.eecs.qmul.ac.uk/~josh/documents/2018/19412.pdf)  
 [D. W. Gunness, O. S. Chauhan, “Optimizing the Magnitude Response of Matched z-Transform Filters (“MZTi”) for Loudspeaker Equalization”](https://www.khabdha.org/wp-content/uploads/2008/03/optimizing-the-magnitude-response-of-mzt-filters-mzti-2007.pdf)  
 

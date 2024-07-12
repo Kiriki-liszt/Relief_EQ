@@ -210,6 +210,11 @@ This causes dataExchange pointer to be null while active process, so check for t
 
 Also, Ableton passes Silence tag quite strongly, so call exchange data after silence is asserted(if you use data exchange for parameter to draw UI or STH).  
 
+## Further lookings  
+
+[John Flynn & Joshua D. Reiss (2018). Improving the frequency response magnitude and phase of analogue-matched digital filters](https://www.eecs.qmul.ac.uk/~josh/documents/2018/19412.pdf)  
+[D. W. Gunness, O. S. Chauhan, “Optimizing the Magnitude Response of Matched z-Transform Filters (“MZTi”) for Loudspeaker Equalization”](https://www.khabdha.org/wp-content/uploads/2008/03/optimizing-the-magnitude-response-of-mzt-filters-mzti-2007.pdf)  
+
 ## Ref  
 
 <https://dafx14.fau.de/papers/dafx14_aaron_wishnick_time_varying_filters_for_.pdf>  

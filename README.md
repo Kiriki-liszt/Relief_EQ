@@ -95,6 +95,8 @@ v1.1.2 :
 
 v1.1.3 : FFT graph more consistent over block size change.  
 
+v1.1.4 : Bug in Apple Silicon Native build fixed.
+
 ## How it started
 
 When I started music, I was mixing live band and some PA stuffs.  

@@ -57,6 +57,7 @@ public:
         {
             dest[Np + j] = A[j] * Ino(Alpha * std::sqrt(1.0 - ((double)(j * j) / (double)(Np * Np)))) / Inoalpha;
         }
+        dest[Np + Np] = A[Np] * Ino(0.0) / Inoalpha; // ARM with optimizer level O3 returns NaN == sqrt(1.0 - n/n), while x64 does not...
         for (int j = 0; j < Np; j++)
         {
             dest[j] = dest[M - 1 - j];

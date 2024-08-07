@@ -212,6 +212,11 @@ This causes dataExchange pointer to be null while active process, so check for t
 
 Also, Ableton passes Silence tag quite strongly, so call exchange data after silence is asserted(if you use data exchange for parameter to draw UI or STH).  
 
+## TODO  
+
+* [ ] FFT tilt  
+* [ ] Dark mode  
+
 ## Further lookings  
 
 [https://gearspace.com/board/showpost.php?p=15864586&postcount=730](https://gearspace.com/board/showpost.php?p=15864586&postcount=730)  

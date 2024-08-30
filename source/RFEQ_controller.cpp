@@ -508,8 +508,8 @@ namespace VSTGUI {
 	std::max(std::min(MIN_FREQ * exp(FREQ_LOG_MAX * x / view.getWidth()), MAX_FREQ), MIN_FREQ)
 
 // Given a magnitude, return y screen position as 0..1 with applied tilt
-#define mag_to_01(m) \
-	1.0 - (( (20 * log10(m)) - ceiling) / (noise_floor - ceiling));
+#define mag_to_01(m, freq) \
+	1.0 - (( ((20 * log10(m)) + (4.5 * ((log(freq) / log(2)) - (log(1024) / log(2))))) - ceiling) / (noise_floor - ceiling));
 
 // Given a magnitude (1.0 .... very small number), return y screen position
 #define mag_to_y(view, m) \
@@ -525,9 +525,6 @@ namespace VSTGUI {
 
 #define dB_to_y_EQ(view, dB) \
 		view.getHeight() * (1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5));
-
-
-
 		
 
 		auto border = getBorderColor();
@@ -582,7 +579,7 @@ namespace VSTGUI {
 		{
 			VSTGUI::CRect r(getViewSize());
 
-			double y_start = mag_to_01(fft_linear[0]);
+			double y_start = mag_to_01(fft_linear[0], fft_freq[0]);
             y_start = (std::max)((std::min)(y_start, 1.0), 0.0);
             y_start *= r.getHeight();
 			FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y_start));
@@ -591,7 +588,7 @@ namespace VSTGUI {
 			for (int bin = 0; bin < numBins; ++bin) {
 				double x = freq_to_x(r, fft_freq[bin]);
 				x = (std::max)((std::min)(x, r.getWidth()), 0.0);
-				double y = mag_to_01(fft_linear[bin]);
+				double y = mag_to_01(fft_linear[bin], fft_freq[bin]);
 				y = (std::max)((std::min)(y, 1.0), 0.0);
 				y *= r.getHeight();
 				if (x - x_last > 0.1)

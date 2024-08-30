@@ -95,7 +95,9 @@ v1.1.2 :
 
 v1.1.3 : FFT graph more consistent over block size change.  
 
-v1.1.4 : Bug in Apple Silicon Native build fixed.
+v1.1.4 : Bug in Apple Silicon Native build fixed.  
+
+v1.1.5 : FFT analyzer tilt 4.5dB/oct added.  
 
 ## How it started
 
@@ -214,8 +216,7 @@ Also, Ableton passes Silence tag quite strongly, so call exchange data after sil
 
 ## TODO  
 
-* [ ] FFT tilt  
-* [ ] Dark mode  
+- [ ] Dark mode  
 
 ## Further lookings  
 

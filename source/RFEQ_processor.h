@@ -170,14 +170,18 @@ protected:
 	// Oversampling and Latency
 	Steinberg::Vst::ParamValue OS_target = 0.0;
 	Flt OS_filter_x2[2];
-	const int fir_size = 69;
-	const int tap_hm = (fir_size - 1) / 2;
+	static SMTG_CONSTEXPR int fir_size = 69;
+	static SMTG_CONSTEXPR int tap_hm = (fir_size - 1) / 2;
 
 	void Fir_x2_dn(Steinberg::Vst::Sample64* in, Steinberg::Vst::Sample64* out, Steinberg::int32 channel);
 
 	const Steinberg::int32 latency_Fir_x2 = 17;
 
-	std::queue<double> latency_q[2];
+    static SMTG_CONSTEXPR size_t sizeofDouble = sizeof(double);
+    static SMTG_CONSTEXPR size_t sizeofOsMove = sizeof(double) * 67;
+    std::queue<double> latency_q[2];
+    double OS_coef alignas(16)[256];
+    double OS_buff alignas(16)[2][256];
 
 	// DataExchange
 

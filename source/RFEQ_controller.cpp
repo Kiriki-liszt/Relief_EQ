@@ -467,17 +467,16 @@ namespace VSTGUI {
 	{
 		// Unit frequency per bin, with sample rate
 		double freqBin_width = sampleRate / fftSize;
-		//FDebugPrint("sampleBlockSize = %d \n", sampleBlockSize);
 		double _SR = sampleRate / (double)sampleBlockSize;
-		double coeff = exp(-1.0 / (100.0 * 0.001 * _SR));
-		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
+        double coeff = exp(-1.0 / (0.3 * 0.001 * sampleRate)); // 16th
+        // double coeff = exp(-1.0 * (double)sampleBlockSize / (0.03 * 0.001 * sampleRate)); // gets faster as block size gets large
+        // double coeff = exp(-1.0 / (0.03 * 0.001 * sampleRate * (double)sampleBlockSize)); // gets slower as block size gets large
+
 		double icoef = 1.0 - coeff;
 
 		for (int i = 0; i < numBins; ++i) {
-			fft_RMS[i] = (fft_RMS[i] * coeff) + (icoef * array[i] * array[i]);
-
-			fft_linear[i] = std::sqrt(fft_RMS[i]);
-
+			fft_RMS[i] = (fft_RMS[i] * coeff) + (icoef * array[i]);
+            fft_linear[i] = fft_RMS[i];
 			fft_freq[i] = (i + 0.5) * freqBin_width;
 		}
 	}
@@ -952,47 +951,75 @@ namespace yg331 {
 //------------------------------------------------------------------------
 // LogRangeParameter Declaration
 //------------------------------------------------------------------------
-class LogRangeParameter : public Vst::RangeParameter
+class LogRangeParameter_noUnit : public Vst::RangeParameter
 {
 public:
-	using RangeParameter::RangeParameter;
-	Vst::ParamValue toPlain(Vst::ParamValue _valueNormalized) const SMTG_OVERRIDE;
-	Vst::ParamValue toNormalized(Vst::ParamValue plainValue) const SMTG_OVERRIDE;
-	void toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const SMTG_OVERRIDE;
+    using RangeParameter::RangeParameter;
+    
+    LogRangeParameter_noUnit (const Vst::TChar* title, Vst::ParamID tag, const Vst::TChar* units = nullptr,
+                       Vst::ParamValue minPlain = 0., Vst::ParamValue maxPlain = 1.,
+                       Vst::ParamValue defaultValuePlain = 0., int32 stepCount = 0,
+                       int32 flags = Steinberg::Vst::ParameterInfo::kCanAutomate, Vst::UnitID unitID = Steinberg::Vst::kRootUnitId,
+                       const Vst::TChar* shortTitle = nullptr)
+    : Vst::RangeParameter(title, tag, units, minPlain, maxPlain, defaultValuePlain, stepCount, flags, unitID, shortTitle)
+    {
+        UString (info.title, str16BufferSize (Vst::String128)).assign (title);
+        if (units)
+            UString (info.units, str16BufferSize (Vst::String128)).assign (units);
+        if (shortTitle)
+            UString (info.shortTitle, str16BufferSize (Vst::String128)).assign (shortTitle);
+
+        info.stepCount = stepCount;
+        info.defaultNormalizedValue = valueNormalized = toNormalized (defaultValuePlain);
+        info.flags = flags;
+        info.id = tag;
+        info.unitId = unitID;
+    }
+    
+    /** Converts a normalized value to plain value (e.g. 0.5 to 10000.0Hz). */
+    Vst::ParamValue toPlain(Vst::ParamValue _valueNormalized) const SMTG_OVERRIDE;
+    
+    /** Converts a plain value to a normalized value (e.g. 10000 to 0.5). */
+    Vst::ParamValue toNormalized(Vst::ParamValue plainValue) const SMTG_OVERRIDE;
+    
+    /** Converts a normalized value to a string. */
+    void toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const SMTG_OVERRIDE;
+    
+    OBJ_METHODS (LogRangeParameter_noUnit, RangeParameter)
 };
 //------------------------------------------------------------------------
 // LogRangeParameter Implementation
 //------------------------------------------------------------------------
-Vst::ParamValue LogRangeParameter::toPlain(Vst::ParamValue _valueNormalized) const
+Vst::ParamValue LogRangeParameter_noUnit::toPlain(Vst::ParamValue _valueNormalized) const
 {
-	double FREQ_LOG_MAX = log(getMax() / getMin());
-	double tmp = getMin() * exp(FREQ_LOG_MAX * _valueNormalized);
-	double freq = (std::max)((std::min)(tmp, getMax()), getMin());
-	return freq;
-	//return _valueNormalized * (getMax() - getMin()) + getMin();
+    double FREQ_LOG_MAX = std::log(getMax() / getMin());
+    double tmp = getMin() * std::exp(FREQ_LOG_MAX * _valueNormalized);
+    double freq = (std::max)((std::min)(tmp, getMax()), getMin());
+    return freq;
+    //return _valueNormalized * (getMax() - getMin()) + getMin();
 }
 
 //------------------------------------------------------------------------
-Vst::ParamValue LogRangeParameter::toNormalized(Vst::ParamValue plainValue) const
+Vst::ParamValue LogRangeParameter_noUnit::toNormalized(Vst::ParamValue plainValue) const
 {
-	SMTG_ASSERT(getMax() - getMin() != 0);
-	double FREQ_LOG_MAX = log(getMax() / getMin());
-	return log(plainValue / getMin()) / FREQ_LOG_MAX;
-	//return (plainValue - getMin()) / (getMax() - getMin());
+    SMTG_ASSERT(getMax() - getMin() != 0);
+    double FREQ_LOG_MAX = std::log(getMax() / getMin());
+    return std::log(plainValue / getMin()) / FREQ_LOG_MAX;
+    //return (plainValue - getMin()) / (getMax() - getMin());
 }
 
-void LogRangeParameter::toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const
+void LogRangeParameter_noUnit::toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const
 {
-	{
-		//Parameter::toString(toPlain(_valueNormalized), string);
-		UString wrapper(string, str16BufferSize(Vst::String128));
-		{
-			if (!wrapper.printFloat(toPlain(_valueNormalized), precision))
-				string[0] = 0;
-			//wrapper.append(STR16(" "));
-			//wrapper.append(getInfo().units);
-		}
-	}
+    {
+        //Parameter::toString(toPlain(_valueNormalized), string);
+        UString wrapper(string, str16BufferSize(Vst::String128));
+        {
+            if (!wrapper.printFloat(toPlain(_valueNormalized), precision))
+                string[0] = 0;
+            // wrapper.append(STR16(" "));
+            // wrapper.append(getInfo().units);
+        }
+    }
 }
 
 //------------------------------------------------------------------------
@@ -1015,10 +1042,34 @@ void LinRangeParameter::toString(Vst::ParamValue _valueNormalized, Vst::String12
 		{
 			if (!wrapper.printFloat(toPlain(_valueNormalized), precision))
 				string[0] = 0;
-			//wrapper.append(STR16(" "));
-			//wrapper.append(getInfo().units);
+			wrapper.append(STR16(" "));
+			wrapper.append(getInfo().units);
 		}
 	}
+}
+
+//------------------------------------------------------------------------
+// LinRangeParameter Declaration
+//------------------------------------------------------------------------
+class LinRangeParameter_noUnit : public Vst::RangeParameter
+{
+public:
+    using RangeParameter::RangeParameter;
+    void toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const SMTG_OVERRIDE;
+};
+//------------------------------------------------------------------------
+// LinRangeParameter Implementation
+//------------------------------------------------------------------------
+void LinRangeParameter_noUnit::toString(Vst::ParamValue _valueNormalized, Vst::String128 string) const
+{
+    {
+        //Parameter::toString(toPlain(_valueNormalized), string);
+        UString wrapper(string, str16BufferSize(Vst::String128));
+        {
+            if (!wrapper.printFloat(toPlain(_valueNormalized), precision))
+                string[0] = 0;
+        }
+    }
 }
 
 //------------------------------------------------------------------------
@@ -1081,7 +1132,7 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 
 	tag = kParamLevel;
 	auto* ParamIn = new LinRangeParameter(STR16("Level"), tag, STR16("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	ParamIn->setPrecision(2);
+	ParamIn->setPrecision(1);
 	parameters.addParameter(ParamIn);
 
 	tag = kParamOutput;
@@ -1104,11 +1155,11 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 	defaultPlain = 0.0;
 	stepCount = 0;
 
-	auto* Band1_dB = new LinRangeParameter(STR("Band1_dB"), kParamBand1_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band2_dB = new LinRangeParameter(STR("Band2_dB"), kParamBand2_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band3_dB = new LinRangeParameter(STR("Band3_dB"), kParamBand3_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band4_dB = new LinRangeParameter(STR("Band4_dB"), kParamBand4_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band5_dB = new LinRangeParameter(STR("Band5_dB"), kParamBand5_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band1_dB = new LinRangeParameter_noUnit(STR("Band1_dB"), kParamBand1_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band2_dB = new LinRangeParameter_noUnit(STR("Band2_dB"), kParamBand2_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band3_dB = new LinRangeParameter_noUnit(STR("Band3_dB"), kParamBand3_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band4_dB = new LinRangeParameter_noUnit(STR("Band4_dB"), kParamBand4_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band5_dB = new LinRangeParameter_noUnit(STR("Band5_dB"), kParamBand5_dB, STR("dB"), minPlain, maxPlain, defaultPlain, stepCount, flags);
 	Band1_dB->setPrecision(2);
 	Band2_dB->setPrecision(2);
 	Band3_dB->setPrecision(2);
@@ -1124,11 +1175,11 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 	maxPlain = SVF::getFreqMax();
 	stepCount = 0;
 
-	auto* Band1_Hz = new LogRangeParameter(STR("Band1_Hz"), kParamBand1_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band1_Hz(), stepCount, flags);
-	auto* Band2_Hz = new LogRangeParameter(STR("Band2_Hz"), kParamBand2_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band2_Hz(), stepCount, flags);
-	auto* Band3_Hz = new LogRangeParameter(STR("Band3_Hz"), kParamBand3_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band3_Hz(), stepCount, flags);
-	auto* Band4_Hz = new LogRangeParameter(STR("Band4_Hz"), kParamBand4_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band4_Hz(), stepCount, flags);
-	auto* Band5_Hz = new LogRangeParameter(STR("Band5_Hz"), kParamBand5_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band5_Hz(), stepCount, flags);
+	auto* Band1_Hz = new LogRangeParameter_noUnit(STR("Band1_Hz"), kParamBand1_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band1_Hz(), stepCount, flags);
+	auto* Band2_Hz = new LogRangeParameter_noUnit(STR("Band2_Hz"), kParamBand2_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band2_Hz(), stepCount, flags);
+	auto* Band3_Hz = new LogRangeParameter_noUnit(STR("Band3_Hz"), kParamBand3_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band3_Hz(), stepCount, flags);
+	auto* Band4_Hz = new LogRangeParameter_noUnit(STR("Band4_Hz"), kParamBand4_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band4_Hz(), stepCount, flags);
+	auto* Band5_Hz = new LogRangeParameter_noUnit(STR("Band5_Hz"), kParamBand5_Hz, STR("Hz"), minPlain, maxPlain, SVF::Init_Band5_Hz(), stepCount, flags);
 	Band1_Hz->setPrecision(0);
 	Band2_Hz->setPrecision(0);
 	Band3_Hz->setPrecision(0);
@@ -1146,11 +1197,11 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
 	defaultPlain = 1.414;
 	stepCount = 0;
 
-	auto* Band1_Q = new LogRangeParameter(STR16("Band1_Q"), kParamBand1_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band2_Q = new LogRangeParameter(STR16("Band2_Q"), kParamBand2_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band3_Q = new LogRangeParameter(STR16("Band3_Q"), kParamBand3_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band4_Q = new LogRangeParameter(STR16("Band4_Q"), kParamBand4_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
-	auto* Band5_Q = new LogRangeParameter(STR16("Band5_Q"), kParamBand5_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band1_Q = new LogRangeParameter_noUnit(STR16("Band1_Q"), kParamBand1_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band2_Q = new LogRangeParameter_noUnit(STR16("Band2_Q"), kParamBand2_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band3_Q = new LogRangeParameter_noUnit(STR16("Band3_Q"), kParamBand3_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band4_Q = new LogRangeParameter_noUnit(STR16("Band4_Q"), kParamBand4_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
+	auto* Band5_Q = new LogRangeParameter_noUnit(STR16("Band5_Q"), kParamBand5_Q, STR16("Q"), minPlain, maxPlain, defaultPlain, stepCount, flags);
 	Band1_Q->setPrecision(2);
 	Band2_Q->setPrecision(2);
 	Band3_Q->setPrecision(2);

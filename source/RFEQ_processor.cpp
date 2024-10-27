@@ -47,10 +47,8 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
 	/* If you don't need an event bus, you can remove the next line */
 	//addEventInput (STR16 ("Event In"), 1);
 
-	for (int ch = 0; ch < 2; ch++) {
-		Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_filter_x2[ch].coef);
-		for (int i = 0; i < fir_size; i++) OS_filter_x2[ch].coef[i] *= 2.0;
-	}
+    Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_coef);
+    for (int i = 0; i < fir_size; i++) OS_coef[i] *= 2.0;
 	FFT.reset();
 	return kResultOk;
 }
@@ -569,7 +567,16 @@ void RFEQ_Processor::processSVF(
 
 			// Downsampling
 			if (fParamOS == overSample_1x) inputSample = up_y[0];
-			else if (fParamOS == overSample_2x) Fir_x2_dn(up_y, &inputSample, channel);
+			else if (fParamOS == overSample_2x)
+            {
+                memmove(OS_buff[channel] + 2, OS_buff[channel], sizeofOsMove);
+                OS_buff[channel][1] = up_y[0];
+                OS_buff[channel][0] = up_y[1];
+                // transform works faster in double[], and slow in std::deque<double>
+                // but if loop order channel->sample, cache miss happens, and std::deque<double> works faster
+                // Well, it just depends case-by-case.
+                inputSample = std::transform_reduce(OS_coef, OS_coef + fir_size, OS_buff[channel] + 1, 0.0);
+            }
 
 			// Latency compensate
 			Vst::Sample64 delayed;
@@ -597,32 +604,6 @@ void RFEQ_Processor::processSVF(
 	FFT.processBlock(fft_in.data(), sampleFrames, 0);
 
 	return;
-}
-
-void RFEQ_Processor::Fir_x2_dn(
-	Vst::Sample64* in,
-	Vst::Sample64* out,
-	Steinberg::int32 channel
-)
-{
-	
-	// OS - downsample
-	memmove(OS_filter_x2[channel].buff + 1, OS_filter_x2[channel].buff, sizeof(double) * (fir_size - 1));
-	OS_filter_x2[channel].buff[0] = in[0];
-	
-	double acc = 0.0;
-
-	for (int i = 0; i < tap_hm; i++) {
-		double a = OS_filter_x2[channel].buff[i];
-		double b = OS_filter_x2[channel].buff[fir_size - 1 - i];
-		acc += OS_filter_x2[channel].coef[i] * (a + b);
-	}   
-	acc += OS_filter_x2[channel].coef[tap_hm] * OS_filter_x2[channel].buff[tap_hm];
-
-	memmove(OS_filter_x2[channel].buff + 1, OS_filter_x2[channel].buff, sizeof(double) * (fir_size - 1));
-	OS_filter_x2[channel].buff[0] = in[1];
-
-	*out = acc;
 }
 
 //------------------------------------------------------------------------

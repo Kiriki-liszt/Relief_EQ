@@ -6,71 +6,13 @@
 #include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
 #include "RFEQ_dataexchange.h"
+#include "RFEQ_shared.h"
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
 #include <math.h>
 #include <queue>
 
 namespace yg331 {
-
-class Kaiser {
-public:
-
-#define maxTap 512
-
-    static inline double Ino(double x)
-    {
-        double d = 0, ds = 1, s = 1;
-        do
-        {
-            d += 2;
-            ds *= x * x / (d * d);
-            s += ds;
-        } while (ds > s * 1e-6);
-        return s;
-    };
-
-    static void calcFilter(double Fs, double Fa, double Fb, int M, double Att, double* dest)
-    {
-        // Kaiser windowed FIR filter "DIGITAL SIGNAL PROCESSING, II" IEEE Press pp 123-126.
-
-        int Np = (M - 1) / 2;
-        double A[maxTap] = { 0, };
-        double Alpha;
-        double Inoalpha;
-
-        A[0] = 2 * (Fb - Fa) / Fs;
-
-        for (int j = 1; j <= Np; j++)
-            A[j] = (sin(2.0 * j * M_PI * Fb / Fs) - sin(2.0 * j * M_PI * Fa / Fs)) / (j * M_PI);
-
-        if (Att < 21.0)
-            Alpha = 0;
-        else if (Att > 50.0)
-            Alpha = 0.1102 * (Att - 8.7);
-        else
-            Alpha = 0.5842 * pow((Att - 21), 0.4) + 0.07886 * (Att - 21);
-
-        Inoalpha = Ino(Alpha);
-
-        for (int j = 0; j <= Np; j++)
-        {
-            dest[Np + j] = A[j] * Ino(Alpha * std::sqrt(1.0 - ((double)(j * j) / (double)(Np * Np)))) / Inoalpha;
-        }
-        dest[Np + Np] = A[Np] * Ino(0.0) / Inoalpha; // ARM with optimizer level O3 returns NaN == sqrt(1.0 - n/n), while x64 does not...
-        for (int j = 0; j < Np; j++)
-        {
-            dest[j] = dest[M - 1 - j];
-        }
-
-    };
-};
-
-// Buffers ------------------------------------------------------------------
-typedef struct _Flt {
-	double coef alignas(16)[maxTap] = { 0, };
-	double buff alignas(16)[maxTap] = { 0, };
-} Flt;
 
 //------------------------------------------------------------------------
 static constexpr Steinberg::Vst::DataExchangeBlock InvalidDataExchangeBlock = {
@@ -83,144 +25,112 @@ static constexpr Steinberg::Vst::DataExchangeBlock InvalidDataExchangeBlock = {
 class RFEQ_Processor : public Steinberg::Vst::AudioEffect
 {
 public:
-	RFEQ_Processor ();
-	~RFEQ_Processor () SMTG_OVERRIDE;
+    RFEQ_Processor ();
+    ~RFEQ_Processor () SMTG_OVERRIDE;
 
     // Create function
-	static Steinberg::FUnknown* createInstance (void* /*context*/) 
-	{ 
-		return (Steinberg::Vst::IAudioProcessor*)new RFEQ_Processor; 
-	}
+    static Steinberg::FUnknown* createInstance (void* /*context*/)
+    {
+        return (Steinberg::Vst::IAudioProcessor*)new RFEQ_Processor;
+    }
 
-	//------------------------------------------------------------------------
-	// AudioEffect overrides:
-	//------------------------------------------------------------------------
-	/** Called at first after constructor */
-	Steinberg::tresult PLUGIN_API initialize (Steinberg::FUnknown* context) SMTG_OVERRIDE;
-	
-	/** Called at the end before destructor */
-	Steinberg::tresult PLUGIN_API terminate () SMTG_OVERRIDE;
+    //------------------------------------------------------------------------
+    // AudioEffect overrides:
+    //------------------------------------------------------------------------
+    /** Called at first after constructor */
+    Steinberg::tresult PLUGIN_API initialize (Steinberg::FUnknown* context) SMTG_OVERRIDE;
+    
+    /** Called at the end before destructor */
+    Steinberg::tresult PLUGIN_API terminate () SMTG_OVERRIDE;
 
-	/** Switch the Plug-in on/off */
-	Steinberg::tresult PLUGIN_API setActive (Steinberg::TBool state) SMTG_OVERRIDE;
+    /** Switch the Plug-in on/off */
+    Steinberg::tresult PLUGIN_API setActive (Steinberg::TBool state) SMTG_OVERRIDE;
 
-	/** Will be called before any process call */
-	Steinberg::tresult PLUGIN_API setupProcessing (Steinberg::Vst::ProcessSetup& newSetup) SMTG_OVERRIDE;
-	
-	/** Asks if a given sample size is supported see SymbolicSampleSizes. */
-	Steinberg::tresult PLUGIN_API canProcessSampleSize (Steinberg::int32 symbolicSampleSize) SMTG_OVERRIDE;
+    /** Will be called before any process call */
+    Steinberg::tresult PLUGIN_API setupProcessing (Steinberg::Vst::ProcessSetup& newSetup) SMTG_OVERRIDE;
+    
+    /** Asks if a given sample size is supported see SymbolicSampleSizes. */
+    Steinberg::tresult PLUGIN_API canProcessSampleSize (Steinberg::int32 symbolicSampleSize) SMTG_OVERRIDE;
 
-	/** Gets the current Latency in samples. */
-	Steinberg::uint32 PLUGIN_API getLatencySamples() SMTG_OVERRIDE;
+    /** Gets the current Latency in samples. */
+    Steinberg::uint32 PLUGIN_API getLatencySamples() SMTG_OVERRIDE;
 
-	/** Here we go...the process call */
-	Steinberg::tresult PLUGIN_API process (Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
-		
-	/** For persistence */
-	Steinberg::tresult PLUGIN_API setState (Steinberg::IBStream* state) SMTG_OVERRIDE;
-	Steinberg::tresult PLUGIN_API getState (Steinberg::IBStream* state) SMTG_OVERRIDE;
+    /** Here we go...the process call */
+    Steinberg::tresult PLUGIN_API process (Steinberg::Vst::ProcessData& data) SMTG_OVERRIDE;
+        
+    /** For persistence */
+    Steinberg::tresult PLUGIN_API setState (Steinberg::IBStream* state) SMTG_OVERRIDE;
+    Steinberg::tresult PLUGIN_API getState (Steinberg::IBStream* state) SMTG_OVERRIDE;
 
-	//---from IAudioProcessor-------
-	Steinberg::tresult PLUGIN_API setBusArrangements(
-		Steinberg::Vst::SpeakerArrangement* inputs,  Steinberg::int32 numIns,
-		Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 numOuts
-	) SMTG_OVERRIDE;
+    //---from IAudioProcessor-------
+    Steinberg::tresult PLUGIN_API setBusArrangements(
+        Steinberg::Vst::SpeakerArrangement* inputs,  Steinberg::int32 numIns,
+        Steinberg::Vst::SpeakerArrangement* outputs, Steinberg::int32 numOuts
+    ) SMTG_OVERRIDE;
 
-	//------------------------------------------------------------------------
-	// IConnectionPoint overrides:
-	//------------------------------------------------------------------------
-	/** Connects this instance with another connection point. */
-	Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
-	/** Disconnects a given connection point from this. */
-	Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
-	/** Called when a message has been sent from the connection point to this. */
-	//Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
+    //------------------------------------------------------------------------
+    // IConnectionPoint overrides:
+    //------------------------------------------------------------------------
+    /** Connects this instance with another connection point. */
+    Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
+    /** Disconnects a given connection point from this. */
+    Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
+    /** Called when a message has been sent from the connection point to this. */
+    Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
 
 //------------------------------------------------------------------------
 protected:
+    static SMTG_CONSTEXPR int32 maxChannel = 2;
+    SampleRate projectSR = 48000.0;
+    void call_after_SR_changed ();
+    void call_after_parameter_changed ();
+    
+    template <typename SampleType>
+    void processSVF ( SampleType** inputs, SampleType** outputs, int32 numChannels, SampleRate getSampleRate, int32 sampleFrames );
 
-	template <typename SampleType>
-	void processSVF
-	(
-		SampleType** inputs,
-		SampleType** outputs,
-		Steinberg::int32 numChannels,
-		Steinberg::Vst::SampleRate getSampleRate,
-		Steinberg::int32 sampleFrames
-	);
+    bool       bBypass = false;
+    ParamValue fLevel  = 0.5;
+    ParamValue fOutput = 0.5;
+    ParamValue fZoom   = 2.0 / 6.0;
+    int32      fParamOS = overSample_2x;
+    
+    ParamBand_Array band1 = {1.0, dftBand1Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array band2 = {1.0, dftBand2Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array band3 = {1.0, dftBand3Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array band4 = {1.0, dftBand4Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array band5 = {1.0, dftBand5Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
 
-	bool                       bBypass = false;
-	Steinberg::Vst::ParamValue fLevel  = 0.5;
-	Steinberg::Vst::ParamValue fOutput = 0.0;
-	Steinberg::Vst::ParamValue fZoom   = 2.0 / 6.0;
-	overSample                 fParamOS = overSample_2x;
+    SVF band1_svf[maxChannel];
+    SVF band2_svf[maxChannel];
+    SVF band3_svf[maxChannel];
+    SVF band4_svf[maxChannel];
+    SVF band5_svf[maxChannel];
 
-	ParamBand_Array fParamBand1_Array = { 1.0, SVF::_Hz_to_norm(80.0),    SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
-	ParamBand_Array fParamBand2_Array = { 1.0, SVF::_Hz_to_norm(200.0),   SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
-	ParamBand_Array fParamBand3_Array = { 1.0, SVF::_Hz_to_norm(2000.0),  SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
-	ParamBand_Array fParamBand4_Array = { 1.0, SVF::_Hz_to_norm(6000.0),  SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
-	ParamBand_Array fParamBand5_Array = { 1.0, SVF::_Hz_to_norm(16000.0), SVF::_Q_to_norm(1.0), SVF::_dB_to_norm(0.0), SVF::_Type_to_norm(SVF::kBell), SVF::_Order_to_norm(SVF::_12dBoct) };
+    // Oversampling and Latency
+    Steinberg::Vst::ParamValue OS_target = 0.0;
+    static SMTG_CONSTEXPR int fir_size = 69;
+    static SMTG_CONSTEXPR int tap_hm = (fir_size - 1) / 2;
 
-	SVF Band1[2];
-	SVF Band2[2];
-	SVF Band3[2];
-	SVF Band4[2];
-	SVF Band5[2];
-
-	// Oversampling and Latency
-	Steinberg::Vst::ParamValue OS_target = 0.0;
-	Flt OS_filter_x2[2];
-	static SMTG_CONSTEXPR int fir_size = 69;
-	static SMTG_CONSTEXPR int tap_hm = (fir_size - 1) / 2;
-
-	void Fir_x2_dn(Steinberg::Vst::Sample64* in, Steinberg::Vst::Sample64* out, Steinberg::int32 channel);
-
-	const Steinberg::int32 latency_Fir_x2 = 17;
+    const Steinberg::int32 latency_Fir_x2 = 17;
 
     static SMTG_CONSTEXPR size_t sizeofDouble = sizeof(double);
     static SMTG_CONSTEXPR size_t sizeofOsMove = sizeof(double) * 67;
     std::queue<double> latency_q[2];
     double OS_coef alignas(16)[256];
-    double OS_buff alignas(16)[2][256];
+    double OS_buff alignas(16)[maxChannel][256];
 
-	// DataExchange
+    // DataExchange
+    bool sendUI = false;
+    void acquireNewExchangeBlock();
 
-	void acquireNewExchangeBlock();
+    std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
+    Steinberg::Vst::DataExchangeBlock currentExchangeBlock{ InvalidDataExchangeBlock };
+    uint16_t numChannels{ 0 };
 
-	std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
-	Steinberg::Vst::DataExchangeBlock currentExchangeBlock{ InvalidDataExchangeBlock };
-	uint16_t numChannels{ 0 };
-
-	// FFT
-
-	FFTProcessor FFT;
-	alignas(16) std::vector<float> fft_in  = { 0.0, }; // size = maxSamples
-	alignas(16) std::vector<float> fft_fps = { 0.0, }; // size = samples_per_block
+    // FFT
+    FFTProcessor FFT;
+    alignas(16) std::vector<float> fft_in  = { 0.0, }; // size = maxSamples
     alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
-	static constexpr int update_rate = 60;
-	int sample_cnt = 0, pos = 0;
-
-	float fft_linear[_numBins] = { 0.0 };
-	float fft_RMS[_numBins] = { 0.0 };
-	float fft_freq[_numBins] = { 0.0 };
-
-	void setFFTArray(float* array, int sampleBlockSize, double sampleRate)
-	{
-		double freqBin_width = sampleRate / _fftSize;
-		double _SR = sampleRate / (double)sampleBlockSize;
-		double coeff = exp(-1.0 / (0.1 * _SR));
-		// 1 / sampleRate = time per sample
-		// we need : time per each function call
-		// 
-		//double coeff = exp(-1.0 / (0.1 * 0.001/*mili-sec*/ * sampleRate));
-		double icoef = 1.0 - coeff;
-
-		for (int i = 0; i < _numBins; ++i) {
-			fft_RMS[i]    = (fft_RMS[i] * coeff) + (icoef * array[i] * array[i]);
-			fft_linear[i] = std::sqrt(fft_RMS[i]);
-			fft_freq[i]   = (i + 0.5) * freqBin_width;
-		}
-	}
 };
 
 //------------------------------------------------------------------------

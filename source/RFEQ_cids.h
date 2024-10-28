@@ -57,13 +57,5 @@ enum {
 	kParamBand4_Order,
 	kParamBand5_Order,
 };
-
-const bool
-Init_Bypass = false;
-
-const Steinberg::Vst::ParamValue
-Init_InputAtten = 1.0,
-Init_Zoom = 0.0 / 6.0;
-
 //------------------------------------------------------------------------
 } // namespace yg331

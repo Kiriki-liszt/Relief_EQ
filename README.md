@@ -90,6 +90,7 @@ v1.1.0 : FFT analyzer added.
 v1.1.1 : Crash after closing the plugin window fixed.  
 
 v1.1.2 :
+
 - Processor - data exchange check at setActive(Ableton crash).  
 - Contoller - save state of Contoller for correct recalling(AUv2, VST with FL studio).
 
@@ -98,6 +99,8 @@ v1.1.3 : FFT graph more consistent over block size change.
 v1.1.4 : Bug in Apple Silicon Native build fixed.  
 
 v1.1.5 : FFT analyzer tilt 4.5dB/oct added.  
+
+v1.1.6 : GUI default reset valur corrected, GUI cosmetic change to match Releif Compressor.  
 
 ## How it started
 

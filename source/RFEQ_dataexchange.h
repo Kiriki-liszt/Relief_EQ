@@ -12,23 +12,15 @@
 
 //------------------------------------------------------------------------
 namespace yg331 {
-	using SampleRate = Steinberg::Vst::SampleRate;
-	using ParamValue = Steinberg::Vst::ParamValue;
-	using TBool = Steinberg::TBool;
-	using uint32 = Steinberg::uint32;
+using ParamValue    = Steinberg::Vst::ParamValue;
+using SampleRate    = Steinberg::Vst::SampleRate;
+using int32         = Steinberg::int32;
+using uint32        = Steinberg::uint32;
+using TBool         = Steinberg::TBool;
 	//------------------------------------------------------------------------
 	struct DataBlock
 	{
-
-		ParamBand_Array Band1;
-		ParamBand_Array Band2;
-		ParamBand_Array Band3;
-		ParamBand_Array Band4;
-		ParamBand_Array Band5;
 		SampleRate filterSampleRate;
-		TBool      filterBypass;
-		ParamValue filterLevel;
-
 		SampleRate FFTSampleRate;
 		uint32     FFTDataAvail;
 		uint32     numSamples;

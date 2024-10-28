@@ -35,6 +35,7 @@ smtg_add_vst3plugin(Relief_EQ
     source/RFEQ_fft.h           # added
     source/RFEQ_fft.cpp         # added
     source/RFEQ_dataexchange.h  # added
+    source/RFEQ_shared.h  # added
     source/RFEQ_processor.h
     source/RFEQ_processor.cpp
     source/RFEQ_controller.h

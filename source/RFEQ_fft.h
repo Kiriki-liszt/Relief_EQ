@@ -3,9 +3,9 @@
 //------------------------------------------------------------------------
 namespace yg331 {
 
-    static constexpr int _fftOrder = 12;
-    static constexpr int _fftSize = 1 << _fftOrder;      // 4096 samples
-    static constexpr int _numBins = _fftSize / 2 + 1;    // 2049 bins
+    static constexpr int fftOrder = 12;
+    static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
+    static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
 
 } // yg331
 
@@ -483,7 +483,7 @@ namespace yg331 {
         void processSpectrum(float* data, int numBins);
 
         // The FFT has 2^order points and fftSize/2 + 1 bins.
-        static constexpr int fftOrder = _fftOrder;
+        static constexpr int fftOrder = yg331::fftOrder;
         static constexpr int fftSize = 1 << fftOrder;      // 4096 samples
         static constexpr int numBins = fftSize / 2 + 1;    // 2049 bins
         static constexpr int overlap = 4;                  // 75% overlap

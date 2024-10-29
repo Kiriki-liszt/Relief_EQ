@@ -20,7 +20,7 @@ Windows and Mac, VST3 and AU.
 
 ## macOS  
 
-- 10.13(High Sierra) to 15.0 (Sequoia)  
+- 10.13(High Sierra) to 15.1 (Sequoia)  
 
 ## How to use  
 

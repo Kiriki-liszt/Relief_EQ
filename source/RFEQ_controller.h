@@ -318,15 +318,6 @@ protected:
     typedef std::vector<Steinberg::Vst::EditorView*> EditorVector;
     EditorVector editors;
 
-    struct ZoomFactor {
-        const Steinberg::tchar* title;
-        double factor;
-
-        ZoomFactor(const Steinberg::tchar* title, double factor) : title(title), factor(factor) {}
-    };
-    typedef std::vector<ZoomFactor> ZoomFactorVector;
-    ZoomFactorVector zoomFactors;
-
     Steinberg::Vst::DataExchangeReceiverHandler dataExchange{ this };
 
     using UICurveControllerList = std::vector<EQCurveViewController*>;

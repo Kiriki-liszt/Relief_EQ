@@ -9,6 +9,7 @@
 
 #define _USE_MATH_DEFINES
 #include <cmath>     // Decibel, Kaiser-Bessel
+#include <vector>
 
 namespace yg331 {
 //------------------------------------------------------------------------
@@ -539,6 +540,25 @@ static SMTG_CONSTEXPR ParamValue dftParamQlty = M_SQRT2;
 
 static SMTG_CONSTEXPR int32      dftParamType = SVF::tBell;
 static SMTG_CONSTEXPR int32      dftParamOrdr = SVF::o12dBoct;
+
+// zoom title-value struct
+struct ZoomFactor
+{
+    const Steinberg::tchar* title;
+    double factor;
+
+    ZoomFactor(const Steinberg::tchar* title, double factor) : title(title), factor(factor) {}
+};
+typedef std::vector<ZoomFactor> ZoomFactorVector;
+static const ZoomFactorVector zoomFactors {ZoomFactor(STR("50%"),   0.50),
+                                           ZoomFactor(STR("75%"),   0.75),
+                                           ZoomFactor(STR("100%"),  1.00),
+                                           ZoomFactor(STR("125%"),  1.25),
+                                           ZoomFactor(STR("150%"),  1.50),
+                                           ZoomFactor(STR("175%"),  1.75),
+                                           ZoomFactor(STR("200%"),  2.00)};
+static SMTG_CONSTEXPR int32 zoomNum = 6;
+static SMTG_CONSTEXPR int32 dftZoom = 2;
 
 static const ParameterConverter paramGain      (minParamGain, maxParamGain, ParameterConverter::range);
 static const ParameterConverter paramFreq      (minParamFreq, maxParamFreq, ParameterConverter::log);

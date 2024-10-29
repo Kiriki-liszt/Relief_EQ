@@ -12,7 +12,7 @@ namespace yg331 {
 static const Steinberg::FUID kRFEQ_ProcessorUID (0xEB8EA8E4, 0xADF058F5, 0xA94A0C17, 0x9DFE6C8D);
 static const Steinberg::FUID kRFEQ_ControllerUID (0x7F073B47, 0x0EFA53C7, 0xBFCE3213, 0xC8E59E95);
 
-#define RFEQ_VST3Category "Fx"
+#define RFEQ_VST3Category "Fx|EQ"
 
 enum {
 	kParamBypass = 0,

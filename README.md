@@ -14,11 +14,11 @@ Windows and Mac, VST3 and AU.
 
 <img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
 
-### Compatibility  
+## Compatibility  
 
 VST3, AUv2  
 
-### System Requirements
+## System Requirements
 
 Audio Units  
 

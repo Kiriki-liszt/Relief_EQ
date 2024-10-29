@@ -421,11 +421,11 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
     
     auto copyNormToPlain = [this](double Norm[], double Plain[])
     {
-        Plain[bandIn] = Norm[bandIn];
-        Plain[bandHz] = paramFreq.ToPlain(Norm[bandHz]);
-        Plain[bandQ]  = paramQlty.ToPlain(Norm[bandQ]);
-        Plain[banddB] = paramGain.ToPlain(Norm[banddB]);
-        Plain[bandType] = paramType.ToPlain(Norm[bandType]);
+        Plain[bandIn]    = Norm[bandIn];
+        Plain[bandHz]    = paramFreq.ToPlain(Norm[bandHz]);
+        Plain[bandQ]     = paramQlty.ToPlain(Norm[bandQ]);
+        Plain[banddB]    = paramGain.ToPlain(Norm[banddB]);
+        Plain[bandType]  = paramType.ToPlain(Norm[bandType]);
         Plain[bandOrder] = paramOrdr.ToPlain(Norm[bandOrder]);
     };
     
@@ -487,16 +487,10 @@ void RFEQ_Processor::processSVF
     Steinberg::int32 sampleFrames
   )
 {
-
-    Vst::Sample64 _db = (24.0 * fLevel - 12.0);
-    Vst::Sample64 level = exp(log(10.0) * _db / 20.0);
+    Vst::Sample64 level = DecibelConverter::ToGain(paramGain.ToPlain(fLevel));
     double div_by_channels = 1.0 / numChannels;
 
-    int32 oversampling = 1;
-    if (fParamOS == overSample_2x) oversampling = 2;
-
-    int32 latency = 0;
-    if (fParamOS == overSample_2x) latency = latency_Fir_x2;
+    int32 oversampling = (fParamOS == overSample_2x) ? 2 : 1;
 
     for (int32 channel = 0; channel < numChannels; channel++)
     {
@@ -538,7 +532,7 @@ void RFEQ_Processor::processSVF
                 memmove(OS_buff[channel] + 2, OS_buff[channel], sizeofOsMove);
                 OS_buff[channel][1] = up_y[0];
                 OS_buff[channel][0] = up_y[1];
-                // transform works faster in double[], and slow in std::deque<double>
+                // transform_reduce works faster in double[], and slow in std::deque<double>
                 // but if loop order channel->sample, cache miss happens, and std::deque<double> works faster
                 // Well, it just depends case-by-case.
                 inputSample = std::transform_reduce(OS_coef, OS_coef + fir_size, OS_buff[channel] + 1, 0.0);

@@ -14,13 +14,20 @@ Windows and Mac, VST3 and AU.
 
 <img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
 
-## Windows  
+### Compatibility  
 
-- x64  
+VST3, AUv2  
 
-## macOS  
+### System Requirements
 
-- 10.13(High Sierra) to 15.1 (Sequoia)  
+Audio Units  
+
+* Mac OS X 10.13 or later (Intel or Apple Silicon Native)
+
+VST3  
+
+* Mac OS X 10.13 or later (Intel or Apple Silicon Native)
+* Windows 10 or later
 
 ## How to use  
 
@@ -78,6 +85,13 @@ The lisence is in the header at RFEQ_fft.h.
 
 It is work of Matthijs Hollemans, obtained at [https://github.com/hollance/fft-juce](https://github.com/hollance/fft-juce)  
 It is under MIT lisence, and you can find the license in the header at RFEQ_fft.h.  
+
+## Project Build  
+
+Use CMake to build itself or make IDE project file.  
+Check .github/workflows/Windows Build.yml.  
+Remember to git clone VSTSDK, too.  
+Supports Windows, Mac, Linux(same as VSTSDK).  
 
 ## Version logs
 

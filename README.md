@@ -100,7 +100,7 @@ v1.1.4 : Bug in Apple Silicon Native build fixed.
 
 v1.1.5 : FFT analyzer tilt 4.5dB/oct added.  
 
-v1.1.6 : GUI default reset valur corrected, GUI cosmetic change to match Releif Compressor.  
+v1.1.6 : Slight refactor, GUI default reset value corrected, GUI cosmetic change to match Releif Compressor.  
 
 ## How it started
 

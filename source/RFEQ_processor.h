@@ -3,14 +3,16 @@
 //------------------------------------------------------------------------
 
 #pragma once
+#include "RFEQ_shared.h"
 #include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
 #include "RFEQ_dataexchange.h"
-#include "RFEQ_shared.h"
+
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
-#include <math.h>
-#include <queue>
+#include <deque>     // std::deque
+#include <numeric>   // std::transform_reduce
+#include <algorithm> // std::fill, std::for_each
 
 namespace yg331 {
 
@@ -76,22 +78,27 @@ public:
     /** Disconnects a given connection point from this. */
     Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
     /** Called when a message has been sent from the connection point to this. */
-    Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
+    // Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
 
 //------------------------------------------------------------------------
 protected:
     static SMTG_CONSTEXPR int32 maxChannel = 2;
-    SampleRate projectSR = 48000.0;
-    void call_after_SR_changed ();
-    void call_after_parameter_changed ();
+    static SMTG_CONSTEXPR int32 fir_size = 69;
+    static SMTG_CONSTEXPR int32 tap_hm = (fir_size - 1) / 2;
+    static SMTG_CONSTEXPR int32 latency_Fir_x2 = (fir_size - 1) / 4;
+    static SMTG_CONSTEXPR size_t sizeofDouble = sizeof(double);
+    static SMTG_CONSTEXPR size_t sizeofOsMove = sizeof(double) * (fir_size - 2);
     
     template <typename SampleType>
     void processSVF ( SampleType** inputs, SampleType** outputs, int32 numChannels, SampleRate getSampleRate, int32 sampleFrames );
+    
+    void call_after_SR_changed ();
+    void call_after_parameter_changed ();
 
     bool       bBypass = false;
     ParamValue fLevel  = 0.5;
-    ParamValue fOutput = 0.5;
-    ParamValue fZoom   = 2.0 / 6.0;
+    ParamValue fOutput = 0.5; // UNUSED
+    ParamValue fZoom   = 2.0 / 6.0; // UNUSED
     int32      fParamOS = overSample_2x;
     
     ParamBand_Array band1 = {1.0, dftBand1Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
@@ -106,21 +113,17 @@ protected:
     SVF band4_svf[maxChannel];
     SVF band5_svf[maxChannel];
 
+    // plugin enviroment
+    SampleRate projectSR = 48000.0;
+    SampleRate targetSR = 96000.0;
+    int32 currLatency = latency_Fir_x2;
+    
     // Oversampling and Latency
-    Steinberg::Vst::ParamValue OS_target = 0.0;
-    static SMTG_CONSTEXPR int fir_size = 69;
-    static SMTG_CONSTEXPR int tap_hm = (fir_size - 1) / 2;
-
-    const Steinberg::int32 latency_Fir_x2 = 17;
-
-    static SMTG_CONSTEXPR size_t sizeofDouble = sizeof(double);
-    static SMTG_CONSTEXPR size_t sizeofOsMove = sizeof(double) * 67;
-    std::queue<double> latency_q[2];
-    double OS_coef alignas(16)[256];
-    double OS_buff alignas(16)[maxChannel][256];
+    std::deque<ParamValue> latencyDelayLine[maxChannel];
+    double OS_coef alignas(16)[Kaiser::maxTap];
+    double OS_buff alignas(16)[maxChannel][Kaiser::maxTap];
 
     // DataExchange
-    bool sendUI = false;
     void acquireNewExchangeBlock();
 
     std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
@@ -130,7 +133,8 @@ protected:
     // FFT
     FFTProcessor FFT;
     alignas(16) std::vector<float> fft_in  = { 0.0, }; // size = maxSamples
-    alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
+    // alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
+    float fft_out alignas(16)[numBins];
 };
 
 //------------------------------------------------------------------------

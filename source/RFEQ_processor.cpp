@@ -47,9 +47,6 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
     /* If you don't need an event bus, you can remove the next line */
     //addEventInput (STR16 ("Event In"), 1);
 
-    Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_coef);
-    for (int i = 0; i < fir_size; i++) OS_coef[i] *= 2.0;
-    FFT.reset();
     return kResultOk;
 }
 
@@ -59,8 +56,8 @@ tresult PLUGIN_API RFEQ_Processor::terminate ()
     // Here the Plug-in will be de-instantiated, last possibility to remove some memory!
     fft_in.clear();
     fft_in.shrink_to_fit();
-    fft_out.clear();
-    fft_out.shrink_to_fit();
+    // fft_out.clear();
+    // fft_out.shrink_to_fit();
     //---do not forget to call parent ------
     return AudioEffect::terminate ();
 }
@@ -140,7 +137,7 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
                 auto sampleSize = sizeof(float);
 
                 config.blockSize = fftSize * sampleSize + sizeof(DataBlock);
-                config.numBlocks = 8;
+                config.numBlocks = 1;
                 // config.alignment = 32;
                 // config.userContextID = 0;
                 return true;
@@ -278,6 +275,9 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
     void** out = getChannelBuffersPointer(processSetup, data.outputs[0]);
     Vst::SampleRate getSampleRate = processSetup.sampleRate;
 
+    std::fill(fft_in.begin(), fft_in.end(), 0.0);
+    // std::fill(fft_out.begin(), fft_out.end(), 0.0);
+
     //---check if silence---------------
     // check if all channel are silent then process silent
     if (data.inputs[0].silenceFlags == Vst::getChannelMask(data.inputs[0].numChannels))
@@ -309,23 +309,27 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
         }
     }
 
-    int data_avail = FFT.getData(fft_out.data());
-
-    if (sendUI) {
+    // int data_avail = FFT.getData(fft_out.data());
+    
+    if (int data_avail = FFT.getData(fft_out); data_avail)
+    {
         //--- send data ----------------
         if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
             acquireNewExchangeBlock();
         if (auto block = toDataBlock(currentExchangeBlock))
         {
-            memcpy(&block->samples[0], fft_out.data(), numBins * sizeof(float));
-            block->FFTSampleRate = getSampleRate;
+            memcpy(&block->samples[0], fft_out, numBins * sizeof(float));
+            // memcpy(&block->samples[0], fft_out.data(), numBins * sizeof(float));
+            // std::copy(fft_out.begin(), fft_out.end(), &block->samples[0]);
+            block->FFTSampleRate = projectSR;
             block->FFTDataAvail = data_avail;
             block->numSamples = data.numSamples;
-            block->filterSampleRate = OS_target;
+            block->filterSampleRate = targetSR;
             dataExchange->sendCurrentBlock();
             acquireNewExchangeBlock();
         }
     }
+    
 
     return kResultOk;
 }
@@ -333,20 +337,33 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
 //------------------------------------------------------------------------
 uint32 PLUGIN_API RFEQ_Processor::getLatencySamples()
 {
-    if (fParamOS == overSample_2x) return latency_Fir_x2;
-    return 0;
+    // fprintf (stdout, "getLatencySamples\n");
+
+    return currLatency;
 }
 
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
 {
     //--- called before any processing ----
-
+    
+    /*
+     createInstance
+     initialize
+     Processor::getState
+     setupProcessing
+     setState
+     getLatencySamples
+     */
+    
+    // fprintf (stdout, "setupProcessing\n");
+    
     projectSR = newSetup.sampleRate;
-    call_after_SR_changed ();
+
+    call_after_SR_changed (); // includes call_after_parameter_changed ()
 
     fft_in.resize(newSetup.maxSamplesPerBlock+1, 0.0);
-    fft_out.resize(numBins, 0.0);
+    // fft_out.resize(numBins, 0.0);
 
     return AudioEffect::setupProcessing (newSetup);
 }
@@ -368,6 +385,8 @@ tresult PLUGIN_API RFEQ_Processor::canProcessSampleSize (int32 symbolicSampleSiz
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
 {
+    // fprintf (stdout, "Processor::setState\n");
+    
     // called when we load a preset, the model has to be reloaded
     IBStreamer streamer(state, kLittleEndian);
     
@@ -378,22 +397,22 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
     Vst::ParamValue savedLevel  = 0.0;
     Vst::ParamValue savedOutput = 0.0; // UNUSED, left for compatibility
 
-    ParamBand_Array savedBand1_Array = { 0.0, };
-    ParamBand_Array savedBand2_Array = { 0.0, };
-    ParamBand_Array savedBand3_Array = { 0.0, };
-    ParamBand_Array savedBand4_Array = { 0.0, };
-    ParamBand_Array savedBand5_Array = { 0.0, };
+    ParamBand_Array savedBand1_Array = {1.0, dftBand1Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand2_Array = {1.0, dftBand2Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand3_Array = {1.0, dftBand3Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand4_Array = {1.0, dftBand4Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand5_Array = {1.0, dftBand5Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
 
     if (streamer.readInt32 (savedBypass) == false) return kResultFalse;
     if (streamer.readDouble(savedZoom  ) == false) return kResultFalse;
     if (streamer.readDouble(savedLevel ) == false) return kResultFalse;
     if (streamer.readDouble(savedOutput) == false) return kResultFalse;
 
-    if (streamer.readDoubleArray(savedBand1_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand2_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand3_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand4_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand5_Array, bandNum) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand1_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand2_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand3_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand4_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand5_Array, bandSize) == false) return kResultFalse;
 
     bBypass = savedBypass > 0;
     // fZoom   = savedZoom;
@@ -424,6 +443,8 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::getState (IBStream* state)
 {
+    // fprintf (stdout, "Processor::getState\n");
+    
     // here we need to save the model
     IBStreamer streamer(state, kLittleEndian);
     
@@ -444,7 +465,7 @@ tresult PLUGIN_API RFEQ_Processor::getState (IBStream* state)
             paramType.ToNormalized(Array[bandType]),
             paramOrdr.ToNormalized(Array[bandOrder])
         };
-        streamer.writeDoubleArray(normArray, bandNum);
+        streamer.writeDoubleArray(normArray, bandSize);
     };
     
     writeDoubleArrayNorm(band1);
@@ -454,28 +475,6 @@ tresult PLUGIN_API RFEQ_Processor::getState (IBStream* state)
     writeDoubleArrayNorm(band5);
     
     return kResultOk;
-}
-
-//------------------------------------------------------------------------
-tresult PLUGIN_API RFEQ_Processor::notify (Vst::IMessage* message)
-{
-    if (!message)
-        return kInvalidArgument;
-
-    if (strcmp (message->getMessageID (), "GUI") == 0)
-    {
-        Steinberg::int64 data;
-        if (message->getAttributes ()->getInt ("start", data) == kResultOk)
-        {
-            if (data == 1)
-                sendUI = true;
-            else
-                sendUI = false;
-            return kResultOk;
-        }
-    }
-
-    return AudioEffect::notify (message);
 }
 
 template <typename SampleType>
@@ -490,11 +489,8 @@ void RFEQ_Processor::processSVF
 {
 
     Vst::Sample64 _db = (24.0 * fLevel - 12.0);
-    Vst::Sample64 In_Atten = exp(log(10.0) * _db / 20.0);
+    Vst::Sample64 level = exp(log(10.0) * _db / 20.0);
     double div_by_channels = 1.0 / numChannels;
-
-    Vst::SampleRate currFs = getSampleRate;
-    if (fParamOS == overSample_2x) currFs = getSampleRate * 2.0;
 
     int32 oversampling = 1;
     if (fParamOS == overSample_2x) oversampling = 2;
@@ -502,30 +498,19 @@ void RFEQ_Processor::processSVF
     int32 latency = 0;
     if (fParamOS == overSample_2x) latency = latency_Fir_x2;
 
-    memset(fft_in.data(),  0, fft_in.size());
-    memset(fft_out.data(), 0, fft_out.size());
-
     for (int32 channel = 0; channel < numChannels; channel++)
     {
-        int32 samples = sampleFrames;
-
         SampleType* ptrIn  = (SampleType*)inputs[channel];
         SampleType* ptrOut = (SampleType*)outputs[channel];
 
         float* fft_in_begin = fft_in.data();
-
-        if (latency != latency_q[channel].size()) {
-            int32 diff = latency - (int32)latency_q[channel].size();
-            if (diff > 0) for (int i = 0; i <  diff; i++) latency_q[channel].push(0.0);
-            else          for (int i = 0; i < -diff; i++) latency_q[channel].pop();
-        }
-
+        
+        int32 samples = sampleFrames;
         while (--samples >= 0)
         {
-            Vst::Sample64 inputSample = *ptrIn;
-            ptrIn++;
+            Vst::Sample64 inputSample = *ptrIn; ptrIn++;
             Vst::Sample64 drySample = inputSample;
-            inputSample *= In_Atten;
+            inputSample *= level;
 
             double up_x[4] = { 0.0, };
             double up_y[4] = { 0.0, };
@@ -560,19 +545,12 @@ void RFEQ_Processor::processSVF
             }
 
             // Latency compensate
-            Vst::Sample64 delayed;
-            if (fParamOS == overSample_1x) {
-                delayed = drySample;
-            }
-            else {
-                delayed = latency_q[channel].front();
-                latency_q[channel].pop();
-                latency_q[channel].push(drySample);
-            }
+            latencyDelayLine[channel].push_back(drySample);
+            Vst::Sample64 delayed = *(latencyDelayLine[channel].end() - 1 - currLatency);
+            latencyDelayLine[channel].pop_front();
 
-            if (bBypass) {
+            if (bBypass)
                 inputSample = delayed;
-            }
 
             *fft_in_begin += div_by_channels * (inputSample);
             fft_in_begin++;
@@ -586,28 +564,40 @@ void RFEQ_Processor::processSVF
 
     return;
 }
+
 void RFEQ_Processor::call_after_SR_changed ()
 {
-    call_after_parameter_changed ();
-    
-    if (projectSR <= 48000.0) {
+    if (projectSR <= 48000.0)
+    {
+        targetSR = 2 * projectSR;
         fParamOS = overSample_2x;
-        OS_target = 2 * projectSR;
+        currLatency = latency_Fir_x2;
     }
-    else {
+    else
+    {
+        targetSR = projectSR;
         fParamOS = overSample_1x;
-        OS_target = projectSR;
+        currLatency = 0;
     }
+    
+    Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_coef); // half band filter
+    
+    std::for_each(OS_coef, OS_coef + fir_size, [](double &n) { n *= 2.0; });
+    for (auto& iter : latencyDelayLine) iter.resize(latency_Fir_x2, 0.0);
+    
+    FFT.reset();
+    
+    call_after_parameter_changed ();
 };
 void RFEQ_Processor::call_after_parameter_changed ()
 {
     for(int ch = 0; ch < maxChannel; ch++)
     {
-        band1_svf[ch].setSVF(band1[bandIn], band1[bandHz], band1[bandQ], band1[banddB], band1[bandType], band1[bandOrder], projectSR);
-        band2_svf[ch].setSVF(band2[bandIn], band2[bandHz], band2[bandQ], band2[banddB], band2[bandType], band2[bandOrder], projectSR);
-        band3_svf[ch].setSVF(band3[bandIn], band3[bandHz], band3[bandQ], band3[banddB], band3[bandType], band3[bandOrder], projectSR);
-        band4_svf[ch].setSVF(band4[bandIn], band4[bandHz], band4[bandQ], band4[banddB], band4[bandType], band4[bandOrder], projectSR);
-        band5_svf[ch].setSVF(band5[bandIn], band5[bandHz], band5[bandQ], band5[banddB], band5[bandType], band5[bandOrder], projectSR);
+        band1_svf[ch].setSVF(band1[bandIn], band1[bandHz], band1[bandQ], band1[banddB], band1[bandType], band1[bandOrder], targetSR);
+        band2_svf[ch].setSVF(band2[bandIn], band2[bandHz], band2[bandQ], band2[banddB], band2[bandType], band2[bandOrder], targetSR);
+        band3_svf[ch].setSVF(band3[bandIn], band3[bandHz], band3[bandQ], band3[banddB], band3[bandType], band3[bandOrder], targetSR);
+        band4_svf[ch].setSVF(band4[bandIn], band4[bandHz], band4[bandQ], band4[banddB], band4[bandType], band4[bandOrder], targetSR);
+        band5_svf[ch].setSVF(band5[bandIn], band5[bandHz], band5[bandQ], band5[banddB], band5[bandType], band5[bandOrder], targetSR);
     }
 };
 

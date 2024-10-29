@@ -413,51 +413,51 @@ EQCurveView::EQCurveView(const EQCurveView& v)
     setWantsIdle(true);
 }
 
-void EQCurveView::setParamNorm(Steinberg::Vst::ParamID tag, yg331::ParamValue normValue)
+void EQCurveView::setParamNorm(Steinberg::Vst::ParamID tag, Steinberg::Vst::ParamValue normValue)
 {
     switch (tag) {
-        case yg331::kParamBand1_In: band1[bandIn] = normValue; break;
-        case yg331::kParamBand2_In: band2[bandIn] = normValue; break;
-        case yg331::kParamBand3_In: band3[bandIn] = normValue; break;
-        case yg331::kParamBand4_In: band4[bandIn] = normValue; break;
-        case yg331::kParamBand5_In: band5[bandIn] = normValue; break;
+        case yg331::kParamBand1_In: band1[yg331::bandIn] = normValue; break;
+        case yg331::kParamBand2_In: band2[yg331::bandIn] = normValue; break;
+        case yg331::kParamBand3_In: band3[yg331::bandIn] = normValue; break;
+        case yg331::kParamBand4_In: band4[yg331::bandIn] = normValue; break;
+        case yg331::kParamBand5_In: band5[yg331::bandIn] = normValue; break;
             
-        case yg331::kParamBand1_Hz: band1[bandHz] = yg331::paramFreq.ToPlain(normValue); break;
-        case yg331::kParamBand2_Hz: band2[bandHz] = yg331::paramFreq.ToPlain(normValue); break;
-        case yg331::kParamBand3_Hz: band3[bandHz] = yg331::paramFreq.ToPlain(normValue); break;
-        case yg331::kParamBand4_Hz: band4[bandHz] = yg331::paramFreq.ToPlain(normValue); break;
-        case yg331::kParamBand5_Hz: band5[bandHz] = yg331::paramFreq.ToPlain(normValue); break;
+        case yg331::kParamBand1_Hz: band1[yg331::bandHz] = yg331::paramFreq.ToPlain(normValue); break;
+        case yg331::kParamBand2_Hz: band2[yg331::bandHz] = yg331::paramFreq.ToPlain(normValue); break;
+        case yg331::kParamBand3_Hz: band3[yg331::bandHz] = yg331::paramFreq.ToPlain(normValue); break;
+        case yg331::kParamBand4_Hz: band4[yg331::bandHz] = yg331::paramFreq.ToPlain(normValue); break;
+        case yg331::kParamBand5_Hz: band5[yg331::bandHz] = yg331::paramFreq.ToPlain(normValue); break;
             
-        case yg331::kParamBand1_Q:  band1[bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
-        case yg331::kParamBand2_Q:  band2[bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
-        case yg331::kParamBand3_Q:  band3[bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
-        case yg331::kParamBand4_Q:  band4[bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
-        case yg331::kParamBand5_Q:  band5[bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
+        case yg331::kParamBand1_Q:  band1[yg331::bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
+        case yg331::kParamBand2_Q:  band2[yg331::bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
+        case yg331::kParamBand3_Q:  band3[yg331::bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
+        case yg331::kParamBand4_Q:  band4[yg331::bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
+        case yg331::kParamBand5_Q:  band5[yg331::bandQ]  = yg331::paramQlty.ToPlain(normValue); break;
             
-        case yg331::kParamBand1_dB: band1[banddB] = yg331::paramGain.ToPlain(normValue); break;
-        case yg331::kParamBand2_dB: band2[banddB] = yg331::paramGain.ToPlain(normValue); break;
-        case yg331::kParamBand3_dB: band3[banddB] = yg331::paramGain.ToPlain(normValue); break;
-        case yg331::kParamBand4_dB: band4[banddB] = yg331::paramGain.ToPlain(normValue); break;
-        case yg331::kParamBand5_dB: band5[banddB] = yg331::paramGain.ToPlain(normValue); break;
+        case yg331::kParamBand1_dB: band1[yg331::banddB] = yg331::paramGain.ToPlain(normValue); break;
+        case yg331::kParamBand2_dB: band2[yg331::banddB] = yg331::paramGain.ToPlain(normValue); break;
+        case yg331::kParamBand3_dB: band3[yg331::banddB] = yg331::paramGain.ToPlain(normValue); break;
+        case yg331::kParamBand4_dB: band4[yg331::banddB] = yg331::paramGain.ToPlain(normValue); break;
+        case yg331::kParamBand5_dB: band5[yg331::banddB] = yg331::paramGain.ToPlain(normValue); break;
             
-        case yg331::kParamBand1_Type: band1[bandType] = (yg331::paramType.ToPlain(normValue)); break;
-        case yg331::kParamBand2_Type: band2[bandType] = (yg331::paramType.ToPlain(normValue)); break;
-        case yg331::kParamBand3_Type: band3[bandType] = (yg331::paramType.ToPlain(normValue)); break;
-        case yg331::kParamBand4_Type: band4[bandType] = (yg331::paramType.ToPlain(normValue)); break;
-        case yg331::kParamBand5_Type: band5[bandType] = (yg331::paramType.ToPlain(normValue)); break;
+        case yg331::kParamBand1_Type: band1[yg331::bandType] = (yg331::paramType.ToPlain(normValue)); break;
+        case yg331::kParamBand2_Type: band2[yg331::bandType] = (yg331::paramType.ToPlain(normValue)); break;
+        case yg331::kParamBand3_Type: band3[yg331::bandType] = (yg331::paramType.ToPlain(normValue)); break;
+        case yg331::kParamBand4_Type: band4[yg331::bandType] = (yg331::paramType.ToPlain(normValue)); break;
+        case yg331::kParamBand5_Type: band5[yg331::bandType] = (yg331::paramType.ToPlain(normValue)); break;
             
-        case yg331::kParamBand1_Order: band1[bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
-        case yg331::kParamBand2_Order: band2[bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
-        case yg331::kParamBand3_Order: band3[bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
-        case yg331::kParamBand4_Order: band4[bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
-        case yg331::kParamBand5_Order: band5[bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
+        case yg331::kParamBand1_Order: band1[yg331::bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
+        case yg331::kParamBand2_Order: band2[yg331::bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
+        case yg331::kParamBand3_Order: band3[yg331::bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
+        case yg331::kParamBand4_Order: band4[yg331::bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
+        case yg331::kParamBand5_Order: band5[yg331::bandOrder] = (yg331::paramOrdr.ToPlain(normValue)); break;
         default: break;
     }
-    band1_svf.setSVF(band1[bandIn], band1[bandHz], band1[bandQ], band1[banddB], band1[bandType], band1[bandOrder], EQ_SR);
-    band2_svf.setSVF(band2[bandIn], band2[bandHz], band2[bandQ], band2[banddB], band2[bandType], band2[bandOrder], EQ_SR);
-    band3_svf.setSVF(band3[bandIn], band3[bandHz], band3[bandQ], band3[banddB], band3[bandType], band3[bandOrder], EQ_SR);
-    band4_svf.setSVF(band4[bandIn], band4[bandHz], band4[bandQ], band4[banddB], band4[bandType], band4[bandOrder], EQ_SR);
-    band5_svf.setSVF(band5[bandIn], band5[bandHz], band5[bandQ], band5[banddB], band5[bandType], band5[bandOrder], EQ_SR);
+    band1_svf.setSVF(band1[yg331::bandIn], band1[yg331::bandHz], band1[yg331::bandQ], band1[yg331::banddB], band1[yg331::bandType], band1[yg331::bandOrder], EQ_SR);
+    band2_svf.setSVF(band2[yg331::bandIn], band2[yg331::bandHz], band2[yg331::bandQ], band2[yg331::banddB], band2[yg331::bandType], band2[yg331::bandOrder], EQ_SR);
+    band3_svf.setSVF(band3[yg331::bandIn], band3[yg331::bandHz], band3[yg331::bandQ], band3[yg331::banddB], band3[yg331::bandType], band3[yg331::bandOrder], EQ_SR);
+    band4_svf.setSVF(band4[yg331::bandIn], band4[yg331::bandHz], band4[yg331::bandQ], band4[yg331::banddB], band4[yg331::bandType], band4[yg331::bandOrder], EQ_SR);
+    band5_svf.setSVF(band5[yg331::bandIn], band5[yg331::bandHz], band5[yg331::bandQ], band5[yg331::banddB], band5[yg331::bandType], band5[yg331::bandOrder], EQ_SR);
 }
 
 #define cubic_hermite(A, B, C, D, t) \
@@ -482,14 +482,14 @@ void EQCurveView::setFFTArray(float* array, int sampleBlockSize, double sampleRa
 {
     // Unit frequency per bin, with sample rate
     double freqBin_width = sampleRate / yg331::fftSize;
-    double _SR = sampleRate / (double)sampleBlockSize;
-    double coeff = exp(-1.0 / (0.3 * 0.001 * sampleRate)); // 16th
+    double coeff = exp(-1.0 / (0.3 * 0.001 * sampleRate));
     // double coeff = exp(-1.0 * (double)sampleBlockSize / (0.03 * 0.001 * sampleRate)); // gets faster as block size gets large
     // double coeff = exp(-1.0 / (0.03 * 0.001 * sampleRate * (double)sampleBlockSize)); // gets slower as block size gets large
 
     double icoef = 1.0 - coeff;
 
     for (int i = 0; i < yg331::numBins; ++i) {
+        if (std::isnan(array[i])) array[i] = 0.00000001;
         fft_RMS[i] = (fft_RMS[i] * coeff) + (icoef * array[i]);
         fft_linear[i] = fft_RMS[i];
         fft_freq[i] = (i + 0.5) * freqBin_width;
@@ -505,69 +505,74 @@ void EQCurveView::draw(CDrawContext* pContext) {
     pContext->setFrameColor(getBorderColor());
     pContext->drawRect(getViewSize(), VSTGUI::kDrawFilledAndStroked);
 
-    double MAX_FREQ = 22000.0;
-    double MIN_FREQ = 10.0;
-    double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
-    double ceiling = 0.0;
-    double noise_floor = -72.0;
-    double DB_EQ_RANGE = 15.0;
+    // Given frequency, return screen x position
+    auto freq_to_x = [this](double width, double freq) -> double {
+        return width * log(freq / MIN_FREQ) / FREQ_LOG_MAX;
+    };
 
+    // Given screen x position, return frequency
+    auto x_to_freq = [this](double width, double x) -> double {
+        return std::max(std::min(MIN_FREQ * exp(FREQ_LOG_MAX * x / width), MAX_FREQ), MIN_FREQ);
+    };
 
-// Given frequency, return screen x position
-#define freq_to_x(view, freq) \
-(view.getWidth() * log(freq / MIN_FREQ) / FREQ_LOG_MAX)
+    // Given a magnitude, return y screen position as 0..1 with applied tilt
+    auto mag_to_01 = [](double m, double freq) -> double {
+        if (m == 0) m = 0.00001;
+        if (freq == 0) freq = 1.0;
+        return 1.0 - (( ((20.0 * log10(m)) + (4.5 * ((log(freq) / log(2.0)) - (log(1024.0) / log(2.0))))) - ceiling) / (noise_floor - ceiling));
+    };
 
-// Given screen x position, return frequency
-#define x_to_freq(view, x) \
-std::max(std::min(MIN_FREQ * exp(FREQ_LOG_MAX * x / view.getWidth()), MAX_FREQ), MIN_FREQ)
+    // Given a magnitude (1.0 .... very small number), return y screen position
+    auto mag_to_y = [](double height, double m) -> double {
+        if (m == 0) m = 0.00001;
+        return (((20.0 * log10(m)) - ceiling) / (noise_floor - ceiling)) * height;
+    };
 
-// Given a magnitude, return y screen position as 0..1 with applied tilt
-#define mag_to_01(m, freq) \
-1.0 - (( ((20 * log10(m)) + (4.5 * ((log(freq) / log(2)) - (log(1024) / log(2))))) - ceiling) / (noise_floor - ceiling));
+    // Given decibels, return screen y position
+    auto db_to_y = [](double height, double dB) -> double {
+        return (((dB - ceiling) / (noise_floor - ceiling)) * height);
+    };
 
-// Given a magnitude (1.0 .... very small number), return y screen position
-#define mag_to_y(view, m) \
-((((20.0 * log10(m)) - ceiling) / (noise_floor - ceiling)) * (view.getHeight()))
+    // Given screen y position, return decibels
+    auto y_to_db = [](double height, double y) -> double {
+        return ceiling + ((y / height) * (noise_floor - ceiling));
+    };
 
-// Given decibels, return screen y position
-#define db_to_y(view, db) \
-(((db - ceiling) / (noise_floor - ceiling)) * view.getHeight())
-
-// Given screen y position, return decibels
-#define y_to_db(view, y) \
-ceiling + ((y / view.getHeight()) * (noise_floor - ceiling));
-
-#define dB_to_y_EQ(view, dB) \
-    view.getHeight() * (1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5));
+    auto dB_to_y_EQ = [](double height, double dB) -> double {
+        return height * (1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5));
+    };
     
 
     auto border = getBorderColor();
     border.setNormAlpha(0.5);
+    
+    const VSTGUI::CRect r(getViewSize());
+    const double r_width = r.getWidth();
+    const double r_height = r.getHeight();
 
     {
-        VSTGUI::CRect r(getViewSize());
         pContext->setFrameColor(border);
         for (int x = 2; x < 10; x++) {
-            VSTGUI::CCoord Hz_10 = freq_to_x(r, 10.0 * x);
+            VSTGUI::CCoord Hz_10 = freq_to_x(r_width, 10.0 * x);
             const VSTGUI::CPoint _p1(r.left + Hz_10, r.bottom);
             const VSTGUI::CPoint _p2(r.left + Hz_10, r.top);
             pContext->drawLine(_p1, _p2);
         }
         for (int x = 1; x < 10; x++) {
-            VSTGUI::CCoord Hz_100 = freq_to_x(r, 100.0 * x);
+            VSTGUI::CCoord Hz_100 = freq_to_x(r_width, 100.0 * x);
             const VSTGUI::CPoint _p1(r.left + Hz_100, r.bottom);
             const VSTGUI::CPoint _p2(r.left + Hz_100, r.top);
             pContext->drawLine(_p1, _p2);
         }
         for (int x = 1; x < 10; x++) {
-            VSTGUI::CCoord Hz_1000 = freq_to_x(r, 1000.0 * x);
+            VSTGUI::CCoord Hz_1000 = freq_to_x(r_width, 1000.0 * x);
             const VSTGUI::CPoint _p1(r.left + Hz_1000, r.bottom);
             const VSTGUI::CPoint _p2(r.left + Hz_1000, r.top);
             pContext->drawLine(_p1, _p2);
         }
 
         for (int x = 1; x < 3; x++) {
-            VSTGUI::CCoord Hz_10000 = freq_to_x(r, 10000.0 * x);
+            VSTGUI::CCoord Hz_10000 = freq_to_x(r_width, 10000.0 * x);
             const VSTGUI::CPoint _p1(r.left + Hz_10000, r.bottom);
             const VSTGUI::CPoint _p2(r.left + Hz_10000, r.top);
             pContext->drawLine(_p1, _p2);
@@ -575,12 +580,10 @@ ceiling + ((y / view.getHeight()) * (noise_floor - ceiling));
     }
 
     {
-        VSTGUI::CRect r(getViewSize());
         pContext->setFrameColor(border);
-
         for (int cnt = -(int)DB_EQ_RANGE; cnt < (int)DB_EQ_RANGE; cnt += 5)
         {
-            VSTGUI::CCoord dB = dB_to_y_EQ(r, cnt);
+            VSTGUI::CCoord dB = dB_to_y_EQ(r_height, cnt);
             const VSTGUI::CPoint _p1(r.left,  r.bottom - dB);
             const VSTGUI::CPoint _p2(r.right, r.bottom - dB);
             pContext->drawLine(_p1, _p2);
@@ -591,21 +594,19 @@ ceiling + ((y / view.getHeight()) * (noise_floor - ceiling));
     VSTGUI::CGraphicsPath* FFT_curve = pContext->createGraphicsPath();
     if (FFT_curve)
     {
-        VSTGUI::CRect r(getViewSize());
-
         double y_start = mag_to_01(fft_linear[0], fft_freq[0]);
         y_start = (std::max)((std::min)(y_start, 1.0), 0.0);
-        y_start *= r.getHeight();
+        y_start *= r_height;
         FFT_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, r.bottom - y_start));
         double x_last = 0.0;
         // RAW
         for (int bin = 0; bin < yg331::numBins; ++bin)
         {
-            double x = freq_to_x(r, fft_freq[bin]);
-            x = (std::max)((std::min)(x, r.getWidth()), 0.0);
+            double x = freq_to_x(r_width, fft_freq[bin]);
+            x = (std::max)((std::min)(x, r_width), 0.0);
             double y = mag_to_01(fft_linear[bin], fft_freq[bin]);
             y = (std::max)((std::min)(y, 1.0), 0.0);
-            y *= r.getHeight();
+            y *= r_height;
             if (x - x_last > 0.1)
             {
                 x_last = x;
@@ -640,22 +641,19 @@ ceiling + ((y / view.getHeight()) * (noise_floor - ceiling));
     VSTGUI::CGraphicsPath* EQ_curve = pContext->createGraphicsPath();
     if (EQ_curve)
     {
-        VSTGUI::CRect r(getViewSize());
-
         VSTGUI::CCoord y_mid = r.bottom - (r.getHeight() / 2.0);
         EQ_curve->beginSubpath(VSTGUI::CPoint(r.left - 1, y_mid));
-        for (double x = -1; x <= r.getWidth() + 1; x+=0.05) {
-            double tmp = MIN_FREQ * exp(FREQ_LOG_MAX * x / r.getWidth());
+        for (double x = -0.5; x <= r.getWidth() + 1; x+=0.5)
+        {
+            double tmp = MIN_FREQ * std::exp(FREQ_LOG_MAX * x / r.getWidth());
             double freq = (std::max)((std::min)(tmp, MAX_FREQ), MIN_FREQ);
-
-            double dB_level = level; // level;
 
             double dB_1 = 20 * log10(band1_svf.mag_response(freq));
             double dB_2 = 20 * log10(band2_svf.mag_response(freq));
             double dB_3 = 20 * log10(band3_svf.mag_response(freq));
             double dB_4 = 20 * log10(band4_svf.mag_response(freq));
             double dB_5 = 20 * log10(band5_svf.mag_response(freq));
-            double dB = dB_level + dB_1 + dB_2 + dB_3 + dB_4 + dB_5;
+            double dB = level + dB_1 + dB_2 + dB_3 + dB_4 + dB_5;
 
             double m = 1.0 - (((dB / DB_EQ_RANGE) / 2) + 0.5);
             double scy = m * r.getHeight();
@@ -1336,11 +1334,11 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
     if (streamer.readDouble(savedLevel ) == false) return kResultFalse;
     if (streamer.readDouble(savedOutput) == false) return kResultFalse;
 
-    if (streamer.readDoubleArray(savedBand1_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand2_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand3_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand4_Array, bandNum) == false) return kResultFalse;
-    if (streamer.readDoubleArray(savedBand5_Array, bandNum) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand1_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand2_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand3_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand4_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand5_Array, bandSize) == false) return kResultFalse;
 
     setParamNormalized(kParamBypass, savedBypass ? 1 : 0);
     // setParamNormalized(kParamZoom, savedZoom);
@@ -1476,30 +1474,12 @@ VSTGUI::IController* RFEQ_Controller::createSubController (VSTGUI::UTF8StringPtr
 void RFEQ_Controller::editorAttached(Vst::EditorView* editor)
 {
     editors.push_back(editor);
-    if (!editors.empty())
-    {
-        if (IPtr<Vst::IMessage> message = owned (allocateMessage ()))
-        {
-           message->setMessageID ("GUI");
-           message->getAttributes()->setInt ("start", 1);
-           sendMessage (message);
-        }
-    }
 }
 
 //------------------------------------------------------------------------
 void RFEQ_Controller::editorRemoved(Vst::EditorView* editor)
 {
     editors.erase(std::find(editors.begin(), editors.end(), editor));
-    if (editors.empty())
-    {
-        if (IPtr<Vst::IMessage> message = owned (allocateMessage ()))
-        {
-           message->setMessageID ("GUI");
-           message->getAttributes()->setInt ("start", 0);
-           sendMessage (message);
-        }
-    }
 }
 
 void PLUGIN_API RFEQ_Controller::update(FUnknown* changedUnknown, int32 message)
@@ -1594,13 +1574,13 @@ void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
 {
     for (auto index = 0u; index < numBlocks; ++index)
     {
-        auto dataBlock = toDataBlock(blocks[index]);
-
         if (!curveControllers.empty())
         {
             for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++)
             {
-                if (dataBlock->FFTDataAvail) (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
+                auto dataBlock = toDataBlock (blocks[index]);
+                if (dataBlock->FFTDataAvail)
+                    (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
                 (*iter)->setEQsampleRate(dataBlock->filterSampleRate);
             }
         }

@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "RFEQ_shared.h"
 #include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
 #include "RFEQ_dataexchange.h"
-#include "RFEQ_shared.h"
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
@@ -140,6 +140,14 @@ protected:
     ~EQCurveView() noexcept override
     {
     };
+    
+    static SMTG_CONSTEXPR double MAX_FREQ = 22000.0;
+    static SMTG_CONSTEXPR double MIN_FREQ = 10.0;
+    double FREQ_LOG_MAX = log(MAX_FREQ / MIN_FREQ);
+    static SMTG_CONSTEXPR double ceiling     = 0.0;   // dB
+    static SMTG_CONSTEXPR double noise_floor = -72.0; // dB
+    static SMTG_CONSTEXPR double DB_FFT_RANGE = ceiling - noise_floor; // dB
+    static SMTG_CONSTEXPR double DB_EQ_RANGE = 15.0;
 
     CColor  BackColor;
     CColor  LineColor;
@@ -147,25 +155,25 @@ protected:
     CColor  FFTLineColor;
     CColor  FFTFillColor;
     
-    ParamBand_Array band1 = {1.0, yg331::dftBand1Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
-    ParamBand_Array band2 = {1.0, yg331::dftBand2Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
-    ParamBand_Array band3 = {1.0, yg331::dftBand3Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
-    ParamBand_Array band4 = {1.0, yg331::dftBand4Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
-    ParamBand_Array band5 = {1.0, yg331::dftBand5Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
+    yg331::ParamBand_Array band1 = {1.0, yg331::dftBand1Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
+    yg331::ParamBand_Array band2 = {1.0, yg331::dftBand2Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
+    yg331::ParamBand_Array band3 = {1.0, yg331::dftBand3Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
+    yg331::ParamBand_Array band4 = {1.0, yg331::dftBand4Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
+    yg331::ParamBand_Array band5 = {1.0, yg331::dftBand5Freq, yg331::dftParamQlty, yg331::dftParamGain, yg331::nrmParamType, yg331::nrmParamOrdr};
 
-    SVF     band1_svf;
-    SVF     band2_svf;
-    SVF     band3_svf;
-    SVF     band4_svf;
-    SVF     band5_svf;
+    yg331::SVF     band1_svf;
+    yg331::SVF     band2_svf;
+    yg331::SVF     band3_svf;
+    yg331::SVF     band4_svf;
+    yg331::SVF     band5_svf;
 
-    bool    byPass;
-    double  level;
+    bool    byPass = false;
+    double  level = 0.0;
     double  EQ_SR = 96000.0;
 
-    float fft_linear[yg331::numBins] = { 0.0 };
-    float fft_RMS[yg331::numBins]    = { 0.0 };
-    float fft_freq[yg331::numBins]   = { 0.0 };
+    float fft_linear[yg331::numBins] = { 0.0, };
+    float fft_RMS[yg331::numBins]    = { 0.0, };
+    float fft_freq[yg331::numBins]   = { 0.0, };
 };
 }
 
@@ -365,22 +373,15 @@ public:
 
     ~EQCurveViewController() override
     {
-        for (int iter = 0; iter < pBand.getParameterCount(); iter++)
-        {
-            Parameter* param = pBand.getParameterByIndex(iter);
-            if (param) param->removeDependent(this);
+        while (!pBand.empty()) {
+            pBand.front()->removeDependent(this);
+            pBand.erase(pBand.cbegin());
         }
-        // pBand.removeAll();
         if (pLevel)  { pLevel ->removeDependent(this); pLevel  = nullptr; }
         if (pBypass) { pBypass->removeDependent(this); pBypass = nullptr; }
         
         mainController->removeEQCurveViewController(this);
     }
-
-    enum Tags
-    {
-        kSendMessageTag = 1000
-    };
 
     void setFFTArray(float* array, int sampleBlockSize, double sampleRate)
     {
@@ -391,12 +392,12 @@ public:
     
     void addBandParam(Parameter* pIn, Parameter* pHz, Parameter* pQ, Parameter* pdB, Parameter* pType, Parameter* pOrder)
     {
-        if (Steinberg::FCast<Parameter> (pIn))    { pBand.addParameter(pIn);    pIn->addDependent(this); }
-        if (Steinberg::FCast<Parameter> (pHz))    { pBand.addParameter(pHz);    pHz->addDependent(this); }
-        if (Steinberg::FCast<Parameter> (pQ))     { pBand.addParameter(pQ);     pQ ->addDependent(this); }
-        if (Steinberg::FCast<Parameter> (pdB))    { pBand.addParameter(pdB);    pdB->addDependent(this); }
-        if (Steinberg::FCast<Parameter> (pType))  { pBand.addParameter(pType);  pType->addDependent(this); }
-        if (Steinberg::FCast<Parameter> (pOrder)) { pBand.addParameter(pOrder); pOrder->addDependent(this); }
+        if (pIn)    { pBand.push_back(pIn);    pIn->addDependent(this); }
+        if (pHz)    { pBand.push_back(pHz);    pHz->addDependent(this); }
+        if (pQ)     { pBand.push_back(pQ);     pQ ->addDependent(this); }
+        if (pdB)    { pBand.push_back(pdB);    pdB->addDependent(this); }
+        if (pType)  { pBand.push_back(pType);  pType->addDependent(this); }
+        if (pOrder) { pBand.push_back(pOrder); pOrder->addDependent(this); }
     }
     void addLevelParam(Parameter* p)
     {
@@ -423,20 +424,23 @@ private:
         {
             if (auto* p = Steinberg::FCast<Parameter>(changedUnknown); p)
             {
+                Steinberg::Vst::ParamID tag = p->getInfo().id;
                 if (message == kChanged)
                 {
-                    Steinberg::Vst::ParamID tag = p->getInfo().id;
-                    if (Parameter* param = pBand.getParameter(tag); param)
+                    for (auto& elem: pBand)
                     {
-                        eqCurveView->setParamNorm(tag, param->getNormalized());
+                        if (elem->getInfo().id == tag) eqCurveView->setParamNorm(tag, p->getNormalized());
                     }
                     if (p == pLevel  && pLevel)  eqCurveView->setLevel (p->getNormalized());
                     if (p == pBypass && pBypass) eqCurveView->setBypass(p->getNormalized());
                 }
                 else if (message == kWillDestroy)
                 {
-                    Steinberg::Vst::ParamID tag = p->getInfo().id;
-                    if (Parameter* param = pBand.getParameter(tag); param ) { param->removeDependent(this); pBand.removeParameter(tag); }
+                    for (auto elem = pBand.begin(); elem != pBand.end();)
+                    {
+                        if ((*elem)->getInfo().id == tag) { (*elem)->removeDependent(this); elem = pBand.erase(elem);}
+                        else {elem++;}
+                    }
                     if (p == pLevel  && pLevel)  { pLevel ->removeDependent(this); pLevel  = nullptr; }
                     if (p == pBypass && pBypass) { pBypass->removeDependent(this); pBypass = nullptr; }
                 }
@@ -459,8 +463,6 @@ private:
         if (EQCurveView* control = dynamic_cast<EQCurveView*>(view); control)
         {
             eqCurveView = control;
-            // eqCurveView->registerControlListener(this);
-            // curveView->setValue(0.0); // do init thing
         }
         return view;
     }
@@ -468,7 +470,7 @@ private:
     RFEQ_Controller* mainController;
     EQCurveView* eqCurveView;
     
-    ParameterContainer pBand;
+    std::vector<Parameter*> pBand;
     Parameter* pLevel;
     Parameter* pBypass;
 };

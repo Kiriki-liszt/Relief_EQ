@@ -349,7 +349,17 @@ protected:
         (Steinberg::tchar*)STR("24")
     };
 
+    TBool      pBypass = false;
+    ParamValue fLevel  = 0.5;
+    ParamValue fOutput = 0.0;
     ParamValue fZoom   = 2.0 / 6.0;
+    int32      fParamOS = overSample_2x;
+    
+    ParamBand_Array fParamBand1_Array = {1.0, nrmBand1Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array fParamBand2_Array = {1.0, nrmBand2Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array fParamBand3_Array = {1.0, nrmBand3Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array fParamBand4_Array = {1.0, nrmBand4Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array fParamBand5_Array = {1.0, nrmBand5Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
 };
 
 

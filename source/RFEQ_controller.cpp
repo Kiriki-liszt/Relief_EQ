@@ -1210,11 +1210,11 @@ tresult PLUGIN_API RFEQ_Controller::initialize (FUnknown* context)
     auto* Band3_Q = new LogRangeParameter_noUnit(STR16("Band3_Q"), kParamBand3_Q, STR16("Q"), minParamQlty, maxParamQlty, dftParamQlty, stepCount, flags);
     auto* Band4_Q = new LogRangeParameter_noUnit(STR16("Band4_Q"), kParamBand4_Q, STR16("Q"), minParamQlty, maxParamQlty, dftParamQlty, stepCount, flags);
     auto* Band5_Q = new LogRangeParameter_noUnit(STR16("Band5_Q"), kParamBand5_Q, STR16("Q"), minParamQlty, maxParamQlty, dftParamQlty, stepCount, flags);
-    Band1_Q->setPrecision(2);
-    Band2_Q->setPrecision(2);
-    Band3_Q->setPrecision(2);
-    Band4_Q->setPrecision(2);
-    Band5_Q->setPrecision(2);
+    Band1_Q->setPrecision(1);
+    Band2_Q->setPrecision(1);
+    Band3_Q->setPrecision(1);
+    Band4_Q->setPrecision(1);
+    Band5_Q->setPrecision(1);
     parameters.addParameter(Band1_Q);
     parameters.addParameter(Band2_Q);
     parameters.addParameter(Band3_Q);
@@ -1323,11 +1323,11 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
     Vst::ParamValue savedLevel  = 0.0;
     Vst::ParamValue savedOutput = 0.0;
     
-    ParamBand_Array savedBand1_Array = {1.0, dftBand1Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
-    ParamBand_Array savedBand2_Array = {1.0, dftBand2Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
-    ParamBand_Array savedBand3_Array = {1.0, dftBand3Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
-    ParamBand_Array savedBand4_Array = {1.0, dftBand4Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
-    ParamBand_Array savedBand5_Array = {1.0, dftBand5Freq, dftParamQlty, dftParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand1_Array = {1.0, nrmBand1Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand2_Array = {1.0, nrmBand2Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand3_Array = {1.0, nrmBand3Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand4_Array = {1.0, nrmBand4Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand5_Array = {1.0, nrmBand5Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
 
     if (streamer.readInt32 (savedBypass) == false) return kResultFalse;
     if (streamer.readDouble(savedZoom  ) == false) return kResultFalse;
@@ -1340,26 +1340,46 @@ tresult PLUGIN_API RFEQ_Controller::setComponentState (IBStream* state)
     if (streamer.readDoubleArray(savedBand4_Array, bandSize) == false) return kResultFalse;
     if (streamer.readDoubleArray(savedBand5_Array, bandSize) == false) return kResultFalse;
 
+    auto setParamNormArray = [this](double Array[], int num)
+    {
+        setParamNormalized(kParamBand1_In    + num, Array[bandIn] ? 1 : 0);
+        setParamNormalized(kParamBand1_Hz    + num, Array[bandHz]);
+        setParamNormalized(kParamBand1_Q     + num, Array[bandQ]);
+        setParamNormalized(kParamBand1_dB    + num, Array[banddB]);
+        setParamNormalized(kParamBand1_Type  + num, Array[bandType]);
+        setParamNormalized(kParamBand1_Order + num, Array[bandOrder]);
+    };
+    
     setParamNormalized(kParamBypass, savedBypass ? 1 : 0);
     // setParamNormalized(kParamZoom, savedZoom);
     setParamNormalized(kParamLevel, savedLevel);
     // setParamNormalized(kParamOutput, savedOutput);
     
-    auto setParamNormArray = [this](double Array[], int num)
-    {
-        setParamNormalized(kParamBand1_In    + (num - 1), Array[bandIn] ? 1 : 0);
-        setParamNormalized(kParamBand1_Hz    + (num - 1), Array[bandHz]);
-        setParamNormalized(kParamBand1_Q     + (num - 1), Array[bandQ]);
-        setParamNormalized(kParamBand1_dB    + (num - 1), Array[banddB]);
-        setParamNormalized(kParamBand1_Type  + (num - 1), Array[bandType]);
-        setParamNormalized(kParamBand1_Order + (num - 1), Array[bandOrder]);
-    };
+    setParamNormArray(savedBand1_Array, 0);
+    setParamNormArray(savedBand2_Array, 1);
+    setParamNormArray(savedBand3_Array, 2);
+    setParamNormArray(savedBand4_Array, 3);
+    setParamNormArray(savedBand5_Array, 4);
     
-    setParamNormArray(savedBand1_Array, 1);
-    setParamNormArray(savedBand2_Array, 2);
-    setParamNormArray(savedBand3_Array, 3);
-    setParamNormArray(savedBand4_Array, 4);
-    setParamNormArray(savedBand5_Array, 5);
+    auto copyArray = [this](double dst[], double src[]) {
+        dst[bandIn]    = src[bandIn];
+        dst[bandHz]    = src[bandHz];
+        dst[bandQ]     = src[bandQ];
+        dst[banddB]    = src[banddB];
+        dst[bandType]  = src[bandType];
+        dst[bandOrder] = src[bandOrder];
+    };
+
+    pBypass = savedBypass > 0;
+    // fZoom   = savedZoom;
+    fLevel  = savedLevel;
+    // fOutput = savedOutput;
+
+    copyArray(fParamBand1_Array, savedBand1_Array);
+    copyArray(fParamBand2_Array, savedBand2_Array);
+    copyArray(fParamBand3_Array, savedBand3_Array);
+    copyArray(fParamBand4_Array, savedBand4_Array);
+    copyArray(fParamBand5_Array, savedBand5_Array);
 
     return kResultOk;
 }
@@ -1375,12 +1395,63 @@ tresult PLUGIN_API RFEQ_Controller::setState (IBStream* state)
     IBStreamer streamer(state, kLittleEndian);
 
     Vst::ParamValue savedZoom   = 0.0;
+    Vst::ParamValue savedLevel  = 0.0;
+    Vst::ParamValue savedOutput = 0.0;
+    
+    ParamBand_Array savedBand1_Array = {1.0, nrmBand1Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand2_Array = {1.0, nrmBand2Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand3_Array = {1.0, nrmBand3Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand4_Array = {1.0, nrmBand4Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    ParamBand_Array savedBand5_Array = {1.0, nrmBand5Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
 
-    if (streamer.readDouble(savedZoom  ) == false) savedZoom   = 0.0;
+    if (streamer.readDouble(savedZoom  ) == false) return kResultFalse;
+    if (streamer.readDouble(savedLevel ) == false) return kResultFalse;
+    if (streamer.readDouble(savedOutput) == false) return kResultFalse;
+
+    if (streamer.readDoubleArray(savedBand1_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand2_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand3_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand4_Array, bandSize) == false) return kResultFalse;
+    if (streamer.readDoubleArray(savedBand5_Array, bandSize) == false) return kResultFalse;
+
+    auto setParamNormArray = [this](double Array[], int num)
+    {
+        setParamNormalized(kParamBand1_In    + num, Array[bandIn] ? 1 : 0);
+        setParamNormalized(kParamBand1_Hz    + num, Array[bandHz]);
+        setParamNormalized(kParamBand1_Q     + num, Array[bandQ]);
+        setParamNormalized(kParamBand1_dB    + num, Array[banddB]);
+        setParamNormalized(kParamBand1_Type  + num, Array[bandType]);
+        setParamNormalized(kParamBand1_Order + num, Array[bandOrder]);
+    };
 
     setParamNormalized(kParamZoom,   savedZoom);
+    setParamNormalized(kParamLevel,  savedLevel);
+    // setParamNormalized(kParamOutput, savedOutput);
+
+    setParamNormArray(savedBand1_Array, 0);
+    setParamNormArray(savedBand2_Array, 1);
+    setParamNormArray(savedBand3_Array, 2);
+    setParamNormArray(savedBand4_Array, 3);
+    setParamNormArray(savedBand5_Array, 4);
+    
+    auto copyArray = [this](double dst[], double src[]) {
+        dst[bandIn]    = src[bandIn];
+        dst[bandHz]    = src[bandHz];
+        dst[bandQ]     = src[bandQ];
+        dst[banddB]    = src[banddB];
+        dst[bandType]  = src[bandType];
+        dst[bandOrder] = src[bandOrder];
+    };
 
     fZoom   = savedZoom;
+    fLevel  = savedLevel;
+    // fOutput = savedOutput;
+
+    copyArray(fParamBand1_Array, savedBand1_Array);
+    copyArray(fParamBand2_Array, savedBand2_Array);
+    copyArray(fParamBand3_Array, savedBand3_Array);
+    copyArray(fParamBand4_Array, savedBand4_Array);
+    copyArray(fParamBand5_Array, savedBand5_Array);
     
     return kResultTrue;
 }
@@ -1391,11 +1462,40 @@ tresult PLUGIN_API RFEQ_Controller::getState (IBStream* state)
     // Here you are asked to deliver the state of the controller (if needed)
     // Note: the real state of your plug-in is saved in the processor
 
+    if (!state)
+        return kResultFalse;
+
     IBStreamer streamer(state, kLittleEndian);
 
     fZoom   = getParamNormalized(kParamZoom);
+    fLevel  = getParamNormalized(kParamLevel);
+    fOutput = getParamNormalized(kParamOutput);
+    
+    auto getParamNormArray = [this](double Array[], int num)
+    {
+        Array[bandIn]    = getParamNormalized(kParamBand1_In    + num);
+        Array[bandHz]    = getParamNormalized(kParamBand1_Hz    + num);
+        Array[bandQ]     = getParamNormalized(kParamBand1_Q     + num);
+        Array[banddB]    = getParamNormalized(kParamBand1_dB    + num);
+        Array[bandType]  = getParamNormalized(kParamBand1_Type  + num);
+        Array[bandOrder] = getParamNormalized(kParamBand1_Order + num);
+    };
+    
+    getParamNormArray(fParamBand1_Array, 0);
+    getParamNormArray(fParamBand2_Array, 1);
+    getParamNormArray(fParamBand3_Array, 2);
+    getParamNormArray(fParamBand4_Array, 3);
+    getParamNormArray(fParamBand5_Array, 4);
 
     streamer.writeDouble(fZoom);
+    streamer.writeDouble(fLevel);
+    streamer.writeDouble(fOutput);
+
+    streamer.writeDoubleArray(fParamBand1_Array, bandSize);
+    streamer.writeDoubleArray(fParamBand2_Array, bandSize);
+    streamer.writeDoubleArray(fParamBand3_Array, bandSize);
+    streamer.writeDoubleArray(fParamBand4_Array, bandSize);
+    streamer.writeDoubleArray(fParamBand5_Array, bandSize);
 
     return kResultTrue;
 }

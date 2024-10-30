@@ -59,8 +59,7 @@ tresult PLUGIN_API RFEQ_Processor::terminate ()
     // Here the Plug-in will be de-instantiated, last possibility to remove some memory!
     fft_in.clear();
     fft_in.shrink_to_fit();
-    // fft_out.clear();
-    // fft_out.shrink_to_fit();
+
     //---do not forget to call parent ------
     return AudioEffect::terminate ();
 }
@@ -363,11 +362,10 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
     // fprintf (stdout, "setupProcessing\n");
     
     projectSR = newSetup.sampleRate;
-
-    call_after_SR_changed (); // includes call_after_parameter_changed ()
-
+    
     fft_in.resize(newSetup.maxSamplesPerBlock+1, 0.0);
-    // fft_out.resize(numBins, 0.0);
+    
+    call_after_SR_changed (); // includes call_after_parameter_changed ()
 
     return AudioEffect::setupProcessing (newSetup);
 }
@@ -574,9 +572,10 @@ void RFEQ_Processor::call_after_SR_changed ()
     }
     
     Kaiser::calcFilter(96000.0, 0.0, 24000.0, fir_size, 110.0, OS_coef); // half band filter
-    
     std::for_each(OS_coef, OS_coef + fir_size, [](double &n) { n *= 2.0; });
-    for (auto& iter : latencyDelayLine) iter.resize(latency_Fir_x2, 0.0);
+    std::fill_n(&OS_buff[0][0], maxChannel * Kaiser::maxTap, 0.0);
+    
+    for (auto& iter : latencyDelayLine) { iter.resize(latency_Fir_x2, 0.0); std::fill(iter.begin(), iter.end(), 0.0); }
     
     FFT.reset();
     

@@ -144,6 +144,8 @@ public:
         }
     }
 
+    static SMTG_CONSTEXPR double dBpow2log = M_LN10 / 40.0; // loge(10) / 40
+    
     inline void makeSVF(dataset* filter)
     {
         if (filter->Hz > filter->Fs / 2.0) filter->Hz = filter->Fs / 2.0;
@@ -152,7 +154,9 @@ public:
         filter->k = 2.0 / filter->Q;
         double A = std::pow(10.0, filter->dB / 40.0);
 
-        double mm = std::exp(-0.0575 * std::abs(filter->dB));
+        // 0.05756462732 = M_LN10 / 40.0;
+        // why not M_LN10 / 20.0? because it's A = std::pow(10.0, filter->dB / 40.0), not pow(10, dB / 20.0)
+        double mm = std::exp(-dBpow2log * std::abs(filter->dB));
         double bk = 1 / (filter->Q * mm);
         double s = M_SQRT2 / std::log2(filter->Q * 0.5 + 1);
 

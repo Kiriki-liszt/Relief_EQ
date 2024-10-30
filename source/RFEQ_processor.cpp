@@ -47,6 +47,9 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
     /* If you don't need an event bus, you can remove the next line */
     //addEventInput (STR16 ("Event In"), 1);
 
+    std::fill_n(&OS_buff[0][0], maxChannel * Kaiser::maxTap, 0.0);
+    std::fill(OS_coef, OS_coef + maxChannel, 0.0);
+
     return kResultOk;
 }
 
@@ -137,7 +140,7 @@ tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
                 auto sampleSize = sizeof(float);
 
                 config.blockSize = fftSize * sampleSize + sizeof(DataBlock);
-                config.numBlocks = 1;
+                config.numBlocks = 2;
                 // config.alignment = 32;
                 // config.userContextID = 0;
                 return true;
@@ -276,6 +279,7 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
     Vst::SampleRate getSampleRate = processSetup.sampleRate;
 
     std::fill(fft_in.begin(), fft_in.end(), 0.0);
+    std::fill(fft_out, fft_out + numBins, 0.0);
     // std::fill(fft_out.begin(), fft_out.end(), 0.0);
 
     //---check if silence---------------
@@ -494,15 +498,10 @@ void RFEQ_Processor::processSVF
 
     for (int32 channel = 0; channel < numChannels; channel++)
     {
-        SampleType* ptrIn  = (SampleType*)inputs[channel];
-        SampleType* ptrOut = (SampleType*)outputs[channel];
-
-        float* fft_in_begin = fft_in.data();
-        
-        int32 samples = sampleFrames;
-        while (--samples >= 0)
+        int32 samples = 0;
+        while (samples < sampleFrames)
         {
-            Vst::Sample64 inputSample = *ptrIn; ptrIn++;
+            Vst::Sample64 inputSample = inputs[channel][samples];
             Vst::Sample64 drySample = inputSample;
             inputSample *= level;
 
@@ -546,11 +545,11 @@ void RFEQ_Processor::processSVF
             if (bBypass)
                 inputSample = delayed;
 
-            *fft_in_begin += div_by_channels * (inputSample);
-            fft_in_begin++;
+            fft_in[samples] += div_by_channels * (inputSample);
+            
+            outputs[channel][samples] = (SampleType)inputSample;
 
-            *ptrOut = (SampleType)inputSample;
-            ptrOut++;
+            samples++;
         }
     }
 

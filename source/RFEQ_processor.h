@@ -120,8 +120,8 @@ protected:
     
     // Oversampling and Latency
     std::deque<ParamValue> latencyDelayLine[maxChannel];
-    double OS_coef alignas(16)[Kaiser::maxTap];
-    double OS_buff alignas(16)[maxChannel][Kaiser::maxTap];
+    double OS_coef alignas(16)[Kaiser::maxTap] = {};
+    double OS_buff alignas(16)[maxChannel][Kaiser::maxTap] = {};
 
     // DataExchange
     void acquireNewExchangeBlock();
@@ -132,9 +132,9 @@ protected:
 
     // FFT
     FFTProcessor FFT;
-    alignas(16) std::vector<float> fft_in  = { 0.0, }; // size = maxSamples
+    alignas(16) std::vector<float> fft_in  = {}; // size = maxSamples
     // alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
-    float fft_out alignas(16)[numBins];
+    float fft_out alignas(16)[numBins] = {};
 };
 
 //------------------------------------------------------------------------

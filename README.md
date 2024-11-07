@@ -114,7 +114,9 @@ v1.1.4 : Bug in Apple Silicon Native build fixed.
 
 v1.1.5 : FFT analyzer tilt 4.5dB/oct added.  
 
-v1.1.6 : Slight refactor, more accurate coef for constant gain-Q dependency, GUI default reset value corrected and cosmetic change to match Relief Compressor.  
+v1.1.6 : Slight refactor, more accurate coef for constant gain-Q dependency, GUI default reset value corrected and cosmetic change to match Relief Compressor. Do not use anymore, as it turns out to be faulty.  
+
+v1.1.6.1 : Hotfix for save-reload process.  
 
 ## How it started
 

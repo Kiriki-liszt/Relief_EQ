@@ -421,7 +421,7 @@ tresult PLUGIN_API RFEQ_Processor::setState (IBStream* state)
     fLevel  = savedLevel;
     // fOutput = savedOutput;
     
-    auto copyNormToPlain = [this](double Norm[], double Plain[])
+    auto copyNormToPlain = [this](double Plain[], double Norm[])
     {
         Plain[bandIn]    = Norm[bandIn];
         Plain[bandHz]    = paramFreq.ToPlain(Norm[bandHz]);

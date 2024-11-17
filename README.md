@@ -14,6 +14,10 @@ Windows and Mac, VST3 and AU.
 
 <img src="https://github.com/Kiriki-liszt/Relief_EQ/blob/main/screenshot.png?raw=true"  width="600"/>  
 
+## Known issues  
+
+Crashes Ableton when deleting plugin, during playpack.  
+
 ## Compatibility  
 
 VST3, AUv2  

@@ -5,7 +5,6 @@
 #pragma once
 
 #include "RFEQ_shared.h"
-#include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
 
 #include "public.sdk/source/vst/vsteditcontroller.h"

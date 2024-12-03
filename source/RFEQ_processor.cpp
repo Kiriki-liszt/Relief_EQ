@@ -442,7 +442,6 @@ void RFEQ_Processor::processSVF
   )
 {
     Vst::Sample64 level = DecibelConverter::ToGain(paramGain.ToPlain(fLevel));
-    double div_by_channels = 1.0 / numChannels;
 
     int32 oversampling = (fParamOS == overSample_2x) ? 2 : 1;
 

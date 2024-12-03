@@ -390,9 +390,9 @@ namespace yg331 {
         float processSample(float sample, bool bypassed);
         void processBlock(float* data, int numSamples, bool bypassed);
         void processBlock(double* data, int numSamples, bool bypassed);
-        int getData(float* out) {
+        bool getData(float* out) {
             if (!data_avail)
-                return 0;
+                return false;
 
             auto* cdata = reinterpret_cast<std::complex<float>*>(&fftData);
             for (int i = 0; i < numBins; ++i) {
@@ -400,7 +400,7 @@ namespace yg331 {
                 out[i] = magnitude;
             }
             data_avail = 0;
-            return 1;
+            return true;
         };
         static void hannWindow(float* window, int length)
         {

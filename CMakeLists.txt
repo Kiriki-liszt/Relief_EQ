@@ -19,7 +19,7 @@ project(Relief_EQ
     # This is your plug-in version number. Change it here only.
     # Version number symbols usable in C++ can be found in
     # source/version.h and ${PROJECT_BINARY_DIR}/projectversion.h.
-    VERSION 1.1.6.1
+    VERSION 1.1.7 
     DESCRIPTION "Relief EQ VST 3 Plug-in"
 )
 
@@ -33,7 +33,6 @@ smtg_add_vst3plugin(Relief_EQ
     source/RFEQ_cids.h
     source/RFEQ_fft.h           # added
     source/RFEQ_fft.cpp         # added
-    source/RFEQ_dataexchange.h  # added
     source/RFEQ_shared.h        # added
     source/RFEQ_processor.h
     source/RFEQ_processor.cpp

@@ -1623,57 +1623,44 @@ tresult PLUGIN_API RFEQ_Controller::getParamValueByString (Vst::ParamID tag, Vst
     return EditControllerEx1::getParamValueByString (tag, string, valueNormalized);
 }
 
-
 //------------------------------------------------------------------------
 // DataExchangeController Implementation
 //------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Controller::notify(Vst::IMessage* message)
 {
-    if (dataExchange.onMessage(message))
-        return kResultTrue;
-
     if (!message)
         return kInvalidArgument;
-
-    return EditControllerEx1::notify(message);
-}
-
-
-//------------------------------------------------------------------------
-void PLUGIN_API RFEQ_Controller::queueOpened(Vst::DataExchangeUserContextID userContextID,
-    uint32 blockSize,
-    TBool& dispatchOnBackgroundThread)
-{
-    //FDebugPrint("Data Exchange Queue opened.\n");
-}
-
-//------------------------------------------------------------------------
-void PLUGIN_API RFEQ_Controller::queueClosed(Vst::DataExchangeUserContextID userContextID)
-{
-    //FDebugPrint("Data Exchange Queue closed.\n");
-}
-
-//------------------------------------------------------------------------
-void PLUGIN_API RFEQ_Controller::onDataExchangeBlocksReceived(
-    Vst::DataExchangeUserContextID userContextID,
-    uint32 numBlocks,
-    Vst::DataExchangeBlock* blocks,
-    TBool onBackgroundThread
-)
-{
-    for (auto index = 0u; index < numBlocks; ++index)
+    
+    if (strcmp (message->getMessageID (), "GUI") == 0)
     {
         if (!curveControllers.empty())
         {
             for (auto iter = curveControllers.begin(); iter != curveControllers.end(); iter++)
             {
-                auto dataBlock = toDataBlock (blocks[index]);
-                if (dataBlock->FFTDataAvail)
-                    (*iter)->setFFTArray(dataBlock->samples, dataBlock->numSamples, dataBlock->FFTSampleRate);
-                (*iter)->setEQsampleRate(dataBlock->filterSampleRate);
+                if (auto attributes = message->getAttributes ())
+                {
+                    const void* data;
+                    uint32 sizeInBytes;
+                    ParamValue getValue = 0.0;
+                    
+                    if (attributes->getFloat  ("projectSR", getValue) == kResultTrue) projectSR = getValue;
+                    if (attributes->getFloat  ("targetSR",  getValue) == kResultTrue) targetSR  = getValue;
+                    if (attributes->getBinary ("sample", data, sizeInBytes) == kResultTrue)
+                    {
+                        auto numSamples = sizeInBytes / sizeof(float);
+                        FFT.processBlock((float*)data, numSamples, 0);
+                        std::fill(fft_out, fft_out + numBins, 0.0);
+                        if (FFT.getData(fft_out))
+                            (*iter)->setFFTArray(fft_out, numSamples, projectSR);
+                        (*iter)->setEQsampleRate(targetSR);
+                    }
+                }
             }
         }
+        return kResultOk;
     }
+
+    return EditControllerEx1::notify(message);
 }
 
 //------------------------------------------------------------------------

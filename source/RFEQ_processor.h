@@ -6,7 +6,6 @@
 #include "RFEQ_shared.h"
 #include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
-#include "RFEQ_dataexchange.h"
 
 #include "public.sdk/source/vst/vstaudioeffect.h"
 
@@ -15,12 +14,6 @@
 #include <algorithm> // std::fill, std::for_each
 
 namespace yg331 {
-
-//------------------------------------------------------------------------
-static constexpr Steinberg::Vst::DataExchangeBlock InvalidDataExchangeBlock = {
-    nullptr, 0, Steinberg::Vst::InvalidDataExchangeBlockID
-};
-
 //------------------------------------------------------------------------
 //  RFEQ_Processor
 //------------------------------------------------------------------------
@@ -73,10 +66,6 @@ public:
     //------------------------------------------------------------------------
     // IConnectionPoint overrides:
     //------------------------------------------------------------------------
-    /** Connects this instance with another connection point. */
-    Steinberg::tresult PLUGIN_API connect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
-    /** Disconnects a given connection point from this. */
-    Steinberg::tresult PLUGIN_API disconnect(Steinberg::Vst::IConnectionPoint* other) SMTG_OVERRIDE;
     /** Called when a message has been sent from the connection point to this. */
     // Steinberg::tresult PLUGIN_API notify(Steinberg::Vst::IMessage* message) SMTG_OVERRIDE;
 
@@ -115,26 +104,13 @@ protected:
 
     // plugin enviroment
     SampleRate projectSR = 48000.0;
-    SampleRate targetSR = 96000.0;
+    SampleRate targetSR  = 96000.0;
     int32 currLatency = latency_Fir_x2;
     
     // Oversampling and Latency
     std::deque<ParamValue> latencyDelayLine[maxChannel];
     double OS_coef alignas(16)[Kaiser::maxTap] = {};
     double OS_buff alignas(16)[maxChannel][Kaiser::maxTap] = {};
-
-    // DataExchange
-    void acquireNewExchangeBlock();
-
-    std::unique_ptr<Steinberg::Vst::DataExchangeHandler> dataExchange;
-    Steinberg::Vst::DataExchangeBlock currentExchangeBlock{ InvalidDataExchangeBlock };
-    uint16_t numChannels{ 0 };
-
-    // FFT
-    FFTProcessor FFT;
-    alignas(16) std::vector<float> fft_in  = {}; // size = maxSamples
-    // alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
-    float fft_out alignas(16)[numBins] = {};
 };
 
 //------------------------------------------------------------------------

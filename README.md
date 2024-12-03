@@ -122,6 +122,8 @@ v1.1.6 : Slight refactor, more accurate coef for constant gain-Q dependency, GUI
 
 v1.1.6.1 : Hotfix for save-reload process.  
 
+v1.1.7 : Revert from the Data Exchange API to the IMessage API.
+
 ## How it started
 
 When I started music, I was mixing live band and some PA stuffs.  

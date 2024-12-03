@@ -7,7 +7,6 @@
 #include "RFEQ_shared.h"
 #include "RFEQ_svf.h"
 #include "RFEQ_fft.h"
-#include "RFEQ_dataexchange.h"
 
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "vstgui/plugin-bindings/vst3editor.h"
@@ -188,7 +187,6 @@ class EQCurveViewController;
 class RFEQ_Controller
     : public Steinberg::Vst::EditControllerEx1
     , public VSTGUI::VST3EditorDelegate
-    , public Steinberg::Vst::IDataExchangeReceiver
 {
 public:
 //------------------------------------------------------------------------
@@ -273,17 +271,6 @@ public:
         return Steinberg::kResultFalse;
     }
 
-
-    // IDataExchangeReceiver
-    void PLUGIN_API queueOpened (Steinberg::Vst::DataExchangeUserContextID userContextID,
-                                 Steinberg::uint32 blockSize,
-                                 Steinberg::TBool& dispatchOnBackgroundThread) SMTG_OVERRIDE;
-    void PLUGIN_API queueClosed (Steinberg::Vst::DataExchangeUserContextID userContextID) SMTG_OVERRIDE;
-    void PLUGIN_API onDataExchangeBlocksReceived (Steinberg::Vst::DataExchangeUserContextID userContextID,
-                                                  Steinberg::uint32 numBlocks,
-                                                  Steinberg::Vst::DataExchangeBlock* blocks,
-                                                  Steinberg::TBool onBackgroundThread) SMTG_OVERRIDE;
-
     //---from VST3EditorDelegate-----------
     VSTGUI::IController* createSubController (VSTGUI::UTF8StringPtr name,
                                               const VSTGUI::IUIDescription* description,
@@ -305,7 +292,6 @@ public:
     DEFINE_INTERFACES
         // Here you can add more supported VST3 interfaces
         // DEF_INTERFACE (Vst::IXXX)
-        DEF_INTERFACE(IDataExchangeReceiver)
     END_DEFINE_INTERFACES (EditController)
     DELEGATE_REFCOUNT (EditController)
 
@@ -317,8 +303,6 @@ protected:
     // editor list
     typedef std::vector<Steinberg::Vst::EditorView*> EditorVector;
     EditorVector editors;
-
-    Steinberg::Vst::DataExchangeReceiverHandler dataExchange{ this };
 
     using UICurveControllerList = std::vector<EQCurveViewController*>;
     UICurveControllerList curveControllers;
@@ -351,6 +335,14 @@ protected:
     ParamBand_Array fParamBand3_Array = {1.0, nrmBand3Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
     ParamBand_Array fParamBand4_Array = {1.0, nrmBand4Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
     ParamBand_Array fParamBand5_Array = {1.0, nrmBand5Freq, nrmParamQlty, nrmParamGain, nrmParamType, nrmParamOrdr};
+    
+    SampleRate projectSR = 48000.0;
+    SampleRate targetSR = 96000.0;
+    
+    // FFT
+    FFTProcessor FFT;
+    // alignas(16) std::vector<float> fft_out = { 0.0, }; // size = numBins
+    float fft_out alignas(16)[numBins] = {0.0, };
 };
 
 

@@ -57,8 +57,6 @@ tresult PLUGIN_API RFEQ_Processor::initialize (FUnknown* context)
 tresult PLUGIN_API RFEQ_Processor::terminate ()
 {
     // Here the Plug-in will be de-instantiated, last possibility to remove some memory!
-    fft_in.clear();
-    fft_in.shrink_to_fit();
 
     //---do not forget to call parent ------
     return AudioEffect::terminate ();
@@ -126,68 +124,10 @@ tresult PLUGIN_API RFEQ_Processor::setBusArrangements(
 }
 
 //------------------------------------------------------------------------
-tresult PLUGIN_API RFEQ_Processor::connect(Vst::IConnectionPoint* other)
-{
-    auto result = Vst::AudioEffect::connect(other);
-    if (result == kResultTrue)
-    {
-        auto configCallback = [this] (Vst::DataExchangeHandler::Config& config,
-                                      const Vst::ProcessSetup& setup) {
-                // Vst::SpeakerArrangement arr;
-                // getBusArrangement(Vst::BusDirections::kInput, 0, arr);
-                // numChannels = static_cast<uint16_t> (Vst::SpeakerArr::getChannelCount(arr));
-                auto sampleSize = sizeof(float);
-
-                config.blockSize = fftSize * sampleSize + sizeof(DataBlock);
-                config.numBlocks = 2;
-                // config.alignment = 32;
-                // config.userContextID = 0;
-                return true;
-            };
-
-        dataExchange = std::make_unique<Vst::DataExchangeHandler>(this, configCallback);
-        dataExchange->onConnect(other, getHostContext());
-    }
-    return result;
-}
-
-//------------------------------------------------------------------------
-tresult PLUGIN_API RFEQ_Processor::disconnect(Vst::IConnectionPoint* other)
-{
-    if (dataExchange)
-    {
-        dataExchange->onDisconnect(other);
-        dataExchange.reset();
-    }
-    return AudioEffect::disconnect(other);
-}
-
-//------------------------------------------------------------------------
 tresult PLUGIN_API RFEQ_Processor::setActive (TBool state)
 {
     //--- called when the Plug-in is enable/disable (On/Off) -----
-    if (state) {
-        if (dataExchange)
-            dataExchange->onActivate(processSetup);
-    }
-    else {
-        if (dataExchange)
-            dataExchange->onDeactivate();
-    }
-
     return AudioEffect::setActive (state);
-}
-
-//------------------------------------------------------------------------
-void RFEQ_Processor::acquireNewExchangeBlock()
-{
-    currentExchangeBlock = dataExchange->getCurrentOrNewBlock();
-    if (auto block = toDataBlock(currentExchangeBlock))
-    {
-        block->filterSampleRate = static_cast<uint32_t> (processSetup.sampleRate);
-        block->FFTSampleRate    = static_cast<uint32_t> (processSetup.sampleRate);
-        block->FFTDataAvail     = 0;
-    }
 }
 
 //------------------------------------------------------------------------
@@ -260,26 +200,21 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
         call_after_parameter_changed ();
     }
 
+    if (data.numSamples <= 0)
+        return kResultOk; // nothing to do
+    
     if (data.numInputs == 0 || data.numOutputs == 0)
-    {
-        // nothing to do
-        return kResultOk;
-    }
+        return kResultOk; // nothing to do
 
     // (simplification) we suppose in this example that we have the same input channel count than
     // the output
-    // int32 numChannels = data.inputs[0].numChannels;
-    numChannels = data.inputs[0].numChannels;
+    int32 numChannels = data.inputs[0].numChannels;
 
     //---get audio buffers----------------
     uint32 sampleFramesSize = getSampleFramesSizeInBytes(processSetup, data.numSamples);
     void** in  = getChannelBuffersPointer(processSetup, data.inputs[0]);
     void** out = getChannelBuffersPointer(processSetup, data.outputs[0]);
     Vst::SampleRate getSampleRate = processSetup.sampleRate;
-
-    std::fill(fft_in.begin(), fft_in.end(), 0.0);
-    std::fill(fft_out, fft_out + numBins, 0.0);
-    // std::fill(fft_out.begin(), fft_out.end(), 0.0);
 
     //---check if silence---------------
     // check if all channel are silent then process silent
@@ -311,28 +246,45 @@ tresult PLUGIN_API RFEQ_Processor::process (Vst::ProcessData& data)
             processSVF<Vst::Sample64>((Vst::Sample64**)in, (Vst::Sample64**)out, numChannels, getSampleRate, data.numSamples);
         }
     }
-
-    // int data_avail = FFT.getData(fft_out.data());
     
-    if (int data_avail = FFT.getData(fft_out); data_avail)
     {
-        //--- send data ----------------
-        if (currentExchangeBlock.blockID == Vst::InvalidDataExchangeBlockID)
-            acquireNewExchangeBlock();
-        if (auto block = toDataBlock(currentExchangeBlock))
+        if (IPtr<Vst::IMessage> message = owned (allocateMessage ()))
         {
-            memcpy(&block->samples[0], fft_out, numBins * sizeof(float));
-            // memcpy(&block->samples[0], fft_out.data(), numBins * sizeof(float));
-            // std::copy(fft_out.begin(), fft_out.end(), &block->samples[0]);
-            block->FFTSampleRate = projectSR;
-            block->FFTDataAvail = data_avail;
-            block->numSamples = data.numSamples;
-            block->filterSampleRate = targetSR;
-            dataExchange->sendCurrentBlock();
-            acquireNewExchangeBlock();
+            message->setMessageID ("GUI");
+            message->getAttributes()->setFloat ("projectSR", projectSR);
+            sendMessage (message);
         }
     }
-    
+    {
+        if (IPtr<Vst::IMessage> message = owned (allocateMessage ()))
+        {
+            message->setMessageID ("GUI");
+            message->getAttributes()->setFloat ("targetSR", targetSR);
+            sendMessage (message);
+        }
+    }
+    {
+        auto output = data.outputs[0];
+        if (IPtr<Vst::IMessage> message = owned (allocateMessage ()))
+        {
+            message->setMessageID ("GUI");
+            std::vector<float> c;
+            if (numChannels == 2) { // Stereo
+                std::transform (output.channelBuffers32[0],
+                                output.channelBuffers32[0] + data.numSamples,
+                                output.channelBuffers32[1],
+                                std::back_inserter(c),
+                                []( const auto &x, const auto &y ) { return std::max( x, y ); });
+            }
+            else {
+                std::copy(output.channelBuffers32[0], output.channelBuffers32[0] + data.numSamples, std::back_inserter(c));
+            }
+            c.resize(data.numSamples, 0.0);
+            if (auto attributes = message->getAttributes())
+                attributes->setBinary ("sample", c.data(), sampleFramesSize);
+            sendMessage (message);
+        }
+    }
 
     return kResultOk;
 }
@@ -363,7 +315,7 @@ tresult PLUGIN_API RFEQ_Processor::setupProcessing (Vst::ProcessSetup& newSetup)
     
     projectSR = newSetup.sampleRate;
     
-    fft_in.resize(newSetup.maxSamplesPerBlock+1, 0.0);
+    //fft_in.resize(newSetup.maxSamplesPerBlock+1, 0.0);
     
     call_after_SR_changed (); // includes call_after_parameter_changed ()
 
@@ -543,16 +495,11 @@ void RFEQ_Processor::processSVF
             if (bBypass)
                 inputSample = delayed;
 
-            fft_in[samples] += div_by_channels * (inputSample);
-            
             outputs[channel][samples] = (SampleType)inputSample;
 
             samples++;
         }
     }
-
-    FFT.processBlock(fft_in.data(), sampleFrames, 0);
-
     return;
 }
 
@@ -577,7 +524,7 @@ void RFEQ_Processor::call_after_SR_changed ()
     
     for (auto& iter : latencyDelayLine) { iter.resize(latency_Fir_x2, 0.0); std::fill(iter.begin(), iter.end(), 0.0); }
     
-    FFT.reset();
+    //FFT.reset();
     
     call_after_parameter_changed ();
 };
